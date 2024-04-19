@@ -111,8 +111,7 @@ def distill(crash, parties, victims, analyzed):
     analyzed['P1_Other Associated Factors'].append(p1_oaf)
     analyzed['P1_Other Associated Violation'].append(p1_oaf_viol)
     analyzed['P1_OAF_CVC'].append(p1_oaf_viol_cvc)
-    
-    
+        
     if nparties > 1:
         p2_age_sex = parties[1]['PARTY_AGE'] + '/' + parties[1]['PARTY_SEX']
         p2_dir = parties[1]['DIR_OF_TRAVEL']
@@ -276,8 +275,7 @@ def distill(crash, parties, victims, analyzed):
         analyzed['V4_Party'].append('')
         analyzed['V4_Role'].append('')
         analyzed['V4_Injury'].append('')
-        
-        
+                
     return analyzed
 
 def decode_weather(code):
@@ -342,8 +340,7 @@ def decode_hit_run(code):
     elif code == 'M':
         hit_run = 'Misdemeanor'
     else:
-        hit_run = 'No'
-    
+        hit_run = 'No'    
     return hit_run    
     
 def decode_pcf(primary_collision_factor, pcf_violation_category):
@@ -456,7 +453,7 @@ def decode_sobriety(code):
     elif code == 'H':
         sobriety = 'Not Applicable'
     else:
-        sobriety = '-'
+        sobriety = ''
 
     return sobriety
 
@@ -470,7 +467,7 @@ def decode_drugs(code):
     elif code == 'I':
         drugs = 'Sleepy/Fatigued'
     else:
-        drugs = '-'
+        drugs = ''
 
     return drugs
     
@@ -669,7 +666,6 @@ def decode_movement(code):
 
     return movement
 
-
 def decode_role(code):
     if code == 1:
         role = 'Driver'
@@ -700,6 +696,7 @@ def decode_injury(code):
         injury = ''
     return injury
 
+# End helper functions ---------------------------------------------------------
 
 def main():
 
