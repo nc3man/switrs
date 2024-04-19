@@ -46,7 +46,7 @@ def split_hhmm(time_digits):
         time = time_digits
     return time
         
-def distill(crash, parties, victims, analyzed):
+def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     case_id = crash['CASE_ID']
     year = crash['ACCIDENT_YEAR']
     date = crash['COLLISION_DATE']
@@ -86,195 +86,68 @@ def distill(crash, parties, victims, analyzed):
 
     # Pull out relevant party data
     nparties = len(parties)
-    p1_age_sex = parties[0]['PARTY_AGE'] + '/' + parties[0]['PARTY_SEX']
-    p1_dir = parties[0]['DIR_OF_TRAVEL']
-    p1_movement = decode_movement(parties[0]['MOVE_PRE_ACC'])
-    p1_type = decode_party_type(int(parties[0]['PARTY_TYPE']))
-    p1_fault = parties[0]['AT_FAULT']
-    p1_sobriety = decode_sobriety(parties[0]['PARTY_SOBRIETY'])
-    p1_drugs = decode_drugs(parties[0]['PARTY_DRUG_PHYSICAL'])
-    p1_oaf = decode_oaf(parties[0]['OAF_1'])
-    p1_oaf_2 = decode_oaf(parties[0]['OAF_2'])
-    if len(p1_oaf_2) > 0:
-        p1_oaf = p1_oaf + ' / ' + p1_oaf_2
-    p1_oaf_viol = decode_oaf_violation(parties[0]['OAF_VIOL_CAT'])
-    p1_oaf_viol_cvc = parties[0]['OAF_VIOL_SECTION'] + '.' + parties[0]['OAF_VIOLATION_SUFFIX']
-    print(f"P1_Age/Sex:{p1_age_sex} P1_Type:{p1_type} P1_Dir:{p1_dir} P1_Movement:{p1_movement} P1_Fault:{p1_fault} P1_Sobriety:{p1_sobriety} P1_Drugs:{p1_drugs} P1_Other Associated Factors:{p1_oaf} P1_Other Associated Violation:{p1_oaf_viol} P1_OAF_CVC:{p1_oaf_viol_cvc}")
-    
-    analyzed['P1_Age/Sex'].append(p1_age_sex)
-    analyzed['P1_Type'].append(p1_type)
-    analyzed['P1_Dir'].append(p1_dir)
-    analyzed['P1_Movement'].append(p1_movement)
-    analyzed['P1_Fault'].append(p1_fault)
-    analyzed['P1_Sobriety'].append(p1_sobriety)
-    analyzed['P1_Drugs'].append(p1_drugs)
-    analyzed['P1_Other Associated Factors'].append(p1_oaf)
-    analyzed['P1_Other Associated Violation'].append(p1_oaf_viol)
-    analyzed['P1_OAF_CVC'].append(p1_oaf_viol_cvc)
+    for n in range(nparties):
+        p_age_sex = parties[n]['PARTY_AGE'] + '/' + parties[n]['PARTY_SEX']
+        p_dir = parties[n]['DIR_OF_TRAVEL']
+        p_movement = decode_movement(parties[n]['MOVE_PRE_ACC'])
+        p_type = decode_party_type(int(parties[n]['PARTY_TYPE']))
+        p_fault = parties[n]['AT_FAULT']
+        p_sobriety = decode_sobriety(parties[n]['PARTY_SOBRIETY'])
+        p_drugs = decode_drugs(parties[n]['PARTY_DRUG_PHYSICAL'])
+        p_oaf = decode_oaf(parties[n]['OAF_1'])
+        p_oaf_2 = decode_oaf(parties[n]['OAF_2'])
+        if len(p_oaf_2) > 0:
+            p_oaf = p_oaf + ' / ' + p_oaf_2
+        p_oaf_viol = decode_oaf_violation(parties[n]['OAF_VIOL_CAT'])
+        p_oaf_viol_cvc = parties[n]['OAF_VIOL_SECTION'] + '.' + parties[n]['OAF_VIOLATION_SUFFIX']
         
-    if nparties > 1:
-        p2_age_sex = parties[1]['PARTY_AGE'] + '/' + parties[1]['PARTY_SEX']
-        p2_dir = parties[1]['DIR_OF_TRAVEL']
-        p2_movement = decode_movement(parties[1]['MOVE_PRE_ACC'])
-        p2_type = decode_party_type(int(parties[1]['PARTY_TYPE']))
-        p2_fault = parties[1]['AT_FAULT']
-        p2_sobriety = decode_sobriety(parties[1]['PARTY_SOBRIETY'])
-        p2_drugs = decode_drugs(parties[1]['PARTY_DRUG_PHYSICAL'])
-        p2_oaf = decode_oaf(parties[1]['OAF_1'])
-        p2_oaf_2 = decode_oaf(parties[1]['OAF_2'])
-        if len(p2_oaf_2) > 0:
-            p2_oaf = p2_oaf + ' / ' + p2_oaf_2
-        p2_oaf_viol = decode_oaf_violation(parties[1]['OAF_VIOL_CAT'])
-        p2_oaf_viol_cvc = parties[1]['OAF_VIOL_SECTION'] + '.' + parties[1]['OAF_VIOLATION_SUFFIX']
-        print(f"P2_Age/Sex:{p2_age_sex} P2_Type:{p2_type} P2_Dir:{p2_dir} P2_Movement:{p2_movement} P2_Fault:{p2_fault} P2_Sobriety:{p2_sobriety} P2_Drugs:{p2_drugs} P2_Other Associated Factors:{p2_oaf} P2_Other Associated Violation:{p2_oaf_viol} P2_OAF_CVC:{p2_oaf_viol_cvc}")
+        prefix = f'P{n+1}'
+        print(f"{prefix}_Age/Sex:{p_age_sex} {prefix}_Type:{p_type} {prefix}_Dir:{p_dir} {prefix}_Movement:{p_movement} {prefix}_Fault:{p_fault} {prefix}_Sobriety:{p_sobriety} {prefix}_Drugs:{p_drugs} {prefix}_Other Associated Factors:{p_oaf} {prefix}_Other Associated Violation:{p_oaf_viol} {prefix}_OAF_CVC:{p_oaf_viol_cvc}")
         
-        analyzed['P2_Age/Sex'].append(p2_age_sex)
-        analyzed['P2_Type'].append(p2_type)
-        analyzed['P2_Dir'].append(p2_dir)
-        analyzed['P2_Movement'].append(p2_movement)
-        analyzed['P2_Fault'].append(p2_fault)
-        analyzed['P2_Sobriety'].append(p2_sobriety)
-        analyzed['P2_Drugs'].append(p2_drugs)
-        analyzed['P2_Other Associated Factors'].append(p2_oaf)
-        analyzed['P2_Other Associated Violation'].append(p2_oaf_viol)
-        analyzed['P2_OAF_CVC'].append(p2_oaf_viol_cvc)
-                       
-    if nparties > 2:
-        p3_age_sex = parties[2]['PARTY_AGE'] + '/' + parties[2]['PARTY_SEX']
-        p3_dir = parties[2]['DIR_OF_TRAVEL']
-        p3_movement = decode_movement(parties[2]['MOVE_PRE_ACC'])
-        p3_type = decode_party_type(int(parties[2]['PARTY_TYPE']))
-        p3_fault = parties[2]['AT_FAULT']        
-        p3_sobriety = decode_sobriety(parties[2]['PARTY_SOBRIETY'])
-        p3_drugs = decode_drugs(parties[2]['PARTY_DRUG_PHYSICAL'])
-        p3_oaf = decode_oaf(parties[2]['OAF_1'])
-        p3_oaf_2 = decode_oaf(parties[2]['OAF_2'])
-        if len(p3_oaf_2) > 0:
-            p3_oaf = p3_oaf + ' / ' + p3_oaf_2
-        p3_oaf_viol = decode_oaf_violation(parties[2]['OAF_VIOL_CAT'])
-        p3_oaf_viol_cvc = parties[2]['OAF_VIOL_SECTION'] + '.' + parties[2]['OAF_VIOLATION_SUFFIX']
-        print(f"P3_Age/Sex:{p3_age_sex} P3_Type:{p3_type} P3_Dir:{p3_dir} P3_Movement:{p3_movement} P3_Fault:{p3_fault} P3_Sobriety:{p3_sobriety} P3_Drugs:{p3_drugs} P3_Other Associated Factors:{p3_oaf} P3_Other Associated Violation:{p3_oaf_viol} P3_OAF_CVC:{p3_oaf_viol_cvc}")
-        
-        analyzed['P3_Age/Sex'].append(p3_age_sex)
-        analyzed['P3_Type'].append(p3_type)
-        analyzed['P3_Dir'].append(p3_dir)
-        analyzed['P3_Movement'].append(p3_movement)
-        analyzed['P3_Fault'].append(p3_fault)
-        analyzed['P3_Sobriety'].append(p3_sobriety)
-        analyzed['P3_Drugs'].append(p3_drugs)
-        analyzed['P3_Other Associated Factors'].append(p3_oaf)
-        analyzed['P3_Other Associated Violation'].append(p3_oaf_viol)
-        analyzed['P3_OAF_CVC'].append(p3_oaf_viol_cvc)
-        
-    # Fill in nulls for nparties < 3
-    if nparties == 1:
-        analyzed['P2_Age/Sex'].append('')
-        analyzed['P2_Type'].append('')
-        analyzed['P2_Dir'].append('')
-        analyzed['P2_Movement'].append('')
-        analyzed['P2_Fault'].append('')
-        analyzed['P2_Sobriety'].append('')
-        analyzed['P2_Drugs'].append('')
-        analyzed['P2_Other Associated Factors'].append('')
-        analyzed['P2_Other Associated Violation'].append('')
-        analyzed['P2_OAF_CVC'].append('')
-         
-        analyzed['P3_Age/Sex'].append('')
-        analyzed['P3_Type'].append('')
-        analyzed['P3_Dir'].append('')
-        analyzed['P3_Movement'].append('')
-        analyzed['P3_Fault'].append('')
-        analyzed['P3_Sobriety'].append('')
-        analyzed['P3_Drugs'].append('')
-        analyzed['P3_Other Associated Factors'].append('')
-        analyzed['P3_Other Associated Violation'].append('')
-        analyzed['P3_OAF_CVC'].append('')
+        analyzed[f'{prefix}_Age/Sex'].append(p_age_sex)
+        analyzed[f'{prefix}_Type'].append(p_type)
+        analyzed[f'{prefix}_Dir'].append(p_dir)
+        analyzed[f'{prefix}_Movement'].append(p_movement)
+        analyzed[f'{prefix}_Fault'].append(p_fault)
+        analyzed[f'{prefix}_Sobriety'].append(p_sobriety)
+        analyzed[f'{prefix}_Drugs'].append(p_drugs)
+        analyzed[f'{prefix}_Other Associated Factors'].append(p_oaf)
+        analyzed[f'{prefix}_Other Associated Violation'].append(p_oaf_viol)
+        analyzed[f'{prefix}_OAF_CVC'].append(p_oaf_viol_cvc)
                 
-    elif nparties == 2:
-        analyzed['P3_Age/Sex'].append('')
-        analyzed['P3_Type'].append('')
-        analyzed['P3_Dir'].append('')
-        analyzed['P3_Movement'].append('')
-        analyzed['P3_Fault'].append('')
-        analyzed['P3_Sobriety'].append('')
-        analyzed['P3_Drugs'].append('') 
-        analyzed['P3_Other Associated Factors'].append('')
-        analyzed['P3_Other Associated Violation'].append('')
-        analyzed['P3_OAF_CVC'].append('')
+    # Fill in nulls for nparties < nparty_max
+    for n in range(nparties, nparty_max):
+        prefix = f'P{n+1}'
+        analyzed[f'{prefix}_Age/Sex'].append('')
+        analyzed[f'{prefix}_Type'].append('')
+        analyzed[f'{prefix}_Dir'].append('')
+        analyzed[f'{prefix}_Movement'].append('')
+        analyzed[f'{prefix}_Fault'].append('')
+        analyzed[f'{prefix}_Sobriety'].append('')
+        analyzed[f'{prefix}_Drugs'].append('')
+        analyzed[f'{prefix}_Other Associated Factors'].append('')
+        analyzed[f'{prefix}_Other Associated Violation'].append('')
+        analyzed[f'{prefix}_OAF_CVC'].append('')
     
     # Pull out relevant victim data
-    nvictims = len(victims)    
-    if nvictims > 0:
-        v1_party = 'P' + victims[0]['PARTY_NUMBER']
-        v1_role = decode_role(int(victims[0]['VICTIM_ROLE']))
-        v1_injury = decode_injury(int(victims[0]['VICTIM_DEGREE_OF_INJURY']))
-        print(f"V1_Party:{v1_party} V1_Role:{v1_role} V1_Injury:{v1_injury}")
-        analyzed['V1_Party'].append(v1_party)
-        analyzed['V1_Role'].append(v1_role)
-        analyzed['V1_Injury'].append(v1_injury)
+    nvictims = len(victims)
+    for n in range(nvictims):
+        v_party = 'P' + victims[n]['PARTY_NUMBER']
+        v_role = decode_role(int(victims[n]['VICTIM_ROLE']))
+        v_injury = decode_injury(int(victims[n]['VICTIM_DEGREE_OF_INJURY']))
         
-    if nvictims > 1:
-        v2_party = 'P' + victims[1]['PARTY_NUMBER']
-        v2_role = decode_role(int(victims[1]['VICTIM_ROLE']))
-        v2_injury = decode_injury(int(victims[1]['VICTIM_DEGREE_OF_INJURY']))       
-        print(f"V2_Party:{v2_party} V2_Role:{v2_role} V2_Injury:{v2_injury}")
-        analyzed['V2_Party'].append(v2_party)
-        analyzed['V2_Role'].append(v2_role)
-        analyzed['V2_Injury'].append(v2_injury)
-   
-    if nvictims > 2:
-        v3_party = 'P' + victims[2]['PARTY_NUMBER']
-        v3_role = decode_role(int(victims[2]['VICTIM_ROLE']))
-        v3_injury = decode_injury(int(victims[2]['VICTIM_DEGREE_OF_INJURY']))       
-        print(f"V3_Party:{v3_party} V3_Role:{v3_role} V3_Injury:{v3_injury}")
-        analyzed['V3_Party'].append(v3_party)
-        analyzed['V3_Role'].append(v3_role)
-        analyzed['V3_Injury'].append(v3_injury)
-
-    if nvictims > 3:
-        v4_party = 'P' + victims[3]['PARTY_NUMBER']
-        v4_role = decode_role(int(victims[3]['VICTIM_ROLE']))
-        v4_injury = decode_injury(int(victims[3]['VICTIM_DEGREE_OF_INJURY']))       
-        print(f"V4_Party:{v4_party} V4_Role:{v4_role} V4_Injury:{v4_injury}")
-        analyzed['V4_Party'].append(v4_party)
-        analyzed['V4_Role'].append(v4_role)
-        analyzed['V4_Injury'].append(v4_injury)
+        prefix = f'V{n+1}'
+        print(f"{prefix}_Party:{v_party} {prefix}_Role:{v_role} {prefix}_Injury:{v_injury}")
+        analyzed[f'{prefix}_Party'].append(v_party)
+        analyzed[f'{prefix}_Role'].append(v_role)
+        analyzed[f'{prefix}_Injury'].append(v_injury)
         
-    #  Fill in nulls for nvictims < 4
-    if nvictims == 0:
-        analyzed['V1_Party'].append('')
-        analyzed['V1_Role'].append('')
-        analyzed['V1_Injury'].append('')
-        analyzed['V2_Party'].append('')
-        analyzed['V2_Role'].append('')
-        analyzed['V2_Injury'].append('')
-        analyzed['V3_Party'].append('')
-        analyzed['V3_Role'].append('')
-        analyzed['V3_Injury'].append('')
-        analyzed['V4_Party'].append('')
-        analyzed['V4_Role'].append('')
-        analyzed['V4_Injury'].append('')      
-    elif nvictims == 1:
-        analyzed['V2_Party'].append('')
-        analyzed['V2_Role'].append('')
-        analyzed['V2_Injury'].append('')
-        analyzed['V3_Party'].append('')
-        analyzed['V3_Role'].append('')
-        analyzed['V3_Injury'].append('')
-        analyzed['V4_Party'].append('')
-        analyzed['V4_Role'].append('')
-        analyzed['V4_Injury'].append('')
-    elif nvictims == 2:
-        analyzed['V3_Party'].append('')
-        analyzed['V3_Role'].append('')
-        analyzed['V3_Injury'].append('')
-        analyzed['V4_Party'].append('')
-        analyzed['V4_Role'].append('')
-        analyzed['V4_Injury'].append('')
-    elif nvictims == 3:
-        analyzed['V4_Party'].append('')
-        analyzed['V4_Role'].append('')
-        analyzed['V4_Injury'].append('')
+    #  Fill in nulls for nvictims < nvictim_max
+    for n in range(nvictims, nvictim_max):
+        prefix = f'V{n+1}'
+        analyzed[f'{prefix}_Party'].append('')
+        analyzed[f'{prefix}_Role'].append('')
+        analyzed[f'{prefix}_Injury'].append('')
                 
     return analyzed
 
@@ -705,6 +578,16 @@ def main():
     parties, party_keys  = getDataCsv(parties_file, ',', pivot=True)
     victims, victim_keys = getDataCsv(victims_file, ',', pivot=True)
     
+    # quickly determine max #parties, #victims for all crash records
+    nparty_max  = 0
+    nvictim_max = 0
+    for crash in crashes:
+        crash_parties = get_parties(crash['CASE_ID'], parties)
+        crash_victims = get_victims(crash['CASE_ID'], victims)
+        if len(crash_parties) > nparty_max: nparty_max = len(crash_parties)
+        if len(crash_victims) > nvictim_max: nvictim_max = len(crash_victims)
+    
+    
     # distill data for each crash
     n = 0
     analyzed = defaultdict(list)
@@ -715,7 +598,8 @@ def main():
         n += 1
         print(f"\nCrash {n} --  #parties: {len(crash_parties)}   #victims: {len(crash_victims)} ")
         
-        analyzed = distill(crash, crash_parties, crash_victims, analyzed)
+        analyzed = distill(crash, crash_parties, crash_victims, analyzed, 
+                           nparty_max, nvictim_max)
         
     dumpDictToCSV(analyzed, out_file, ',',  list(analyzed.keys()))
     print(f"\nOutput saved in {out_file}")
