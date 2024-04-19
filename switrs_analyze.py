@@ -55,7 +55,7 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
         location = crash['PRIMARY_RD'] + ' @ ' + crash['SECONDARY_RD']
     else:
         location = crash['PRIMARY_RD'] + ' ' + f"{float(crash['DISTANCE']):.0f}" + 'ft ' \
-        + crash['DIRECTION'] + ' ' + crash['SECONDARY_RD']
+        + crash['DIRECTION'] + ' / ' + crash['SECONDARY_RD']
     collision_type = decode_collision(crash['TYPE_OF_COLLISION'])
     weather = decode_weather(crash['WEATHER_1'])
     if len(decode_weather(crash['WEATHER_2'])) > 0:
