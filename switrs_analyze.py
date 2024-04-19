@@ -14,7 +14,7 @@ out_file = inpath + 'SWITRS_Vista_2018-2023.csv'
 
 # Do not edit below this line --------------------------------------------------
 
-# Function declarations
+# Helper functions
 
 def get_parties(case_id, parties):
     party_found = []
@@ -36,16 +36,16 @@ def get_victims(case_id, victims):
     for victim in victims:
         if victim['CASE_ID'] == case_id:
             victim_found.append(victim)
-    return victim_found
-    
-def split_hhmm(time_digits):
-    # format 4-digit time hhmm as hh:mm
-    if len(time_digits) == 4:
-        time = time_digits[0:2] + ':' + time_digits[2:]
-    else:
-        time = time_digits
-    return time
-        
+       
+    # ensure that the victim_found list is in VICTIM_NUMBER order
+    victims_found = []
+    for n in range(len(victim_found)):
+        for victim in victim_found:
+            if int(victim['VICTIM_NUMBER']) == n+1:
+                victims_found.append(victim)
+                
+    return victims_found
+      
 def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     case_id = crash['CASE_ID']
     year = crash['ACCIDENT_YEAR']
@@ -54,7 +54,7 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     if crash['INTERSECTION'] == 'Y':
         location = crash['PRIMARY_RD'] + ' @ ' + crash['SECONDARY_RD']
     else:
-        location = crash['PRIMARY_RD'] + ' ' + crash['DISTANCE'] + 'ft ' \
+        location = crash['PRIMARY_RD'] + ' ' + f"{float(crash['DISTANCE']):.0f}" + 'ft ' \
         + crash['DIRECTION'] + ' ' + crash['SECONDARY_RD']
     collision_type = decode_collision(crash['TYPE_OF_COLLISION'])
     weather = decode_weather(crash['WEATHER_1'])
@@ -150,7 +150,15 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
         analyzed[f'{prefix}_Injury'].append('')
                 
     return analyzed
-
+    
+def split_hhmm(time_digits):
+    # reformat 4-digit time hhmm as hh:mm
+    if len(time_digits) == 4:
+        time = time_digits[0:2] + ':' + time_digits[2:]
+    else:
+        time = time_digits
+    return time
+      
 def decode_weather(code):
     if code == 'A':
         weather = 'Clear'
@@ -391,7 +399,6 @@ def decode_oaf(code):
         oaf = ''
 
     return oaf
-
     
 def decode_oaf_violation(code):
     if code == '01':
@@ -587,20 +594,18 @@ def main():
         if len(crash_parties) > nparty_max: nparty_max = len(crash_parties)
         if len(crash_victims) > nvictim_max: nvictim_max = len(crash_victims)
     
-    
     # distill data for each crash
     n = 0
     analyzed = defaultdict(list)
     for crash in crashes:
         crash_parties = get_parties(crash['CASE_ID'], parties)
         crash_victims = get_victims(crash['CASE_ID'], victims)
-        
-        n += 1
+        n+=1
         print(f"\nCrash {n} --  #parties: {len(crash_parties)}   #victims: {len(crash_victims)} ")
         
-        analyzed = distill(crash, crash_parties, crash_victims, analyzed, 
-                           nparty_max, nvictim_max)
+        analyzed = distill(crash, crash_parties, crash_victims, analyzed, nparty_max, nvictim_max)
         
+    # save analyzed dictionary to CSV file
     dumpDictToCSV(analyzed, out_file, ',',  list(analyzed.keys()))
     print(f"\nOutput saved in {out_file}")
         

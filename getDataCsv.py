@@ -1,8 +1,5 @@
-import numpy as np
 import csv
 from collections import defaultdict
-import time
-import datetime
 
 def getDataCsv( csvFile, delimiter, pivot=False ):
     """
@@ -17,7 +14,7 @@ def getDataCsv( csvFile, delimiter, pivot=False ):
       delimiter - Character used to uniquely separate the cells of the
                   spreadsheet by row.
       pivot   - If true, the data which is a single dictionary with keys for each csv column
-                is pivoted to an array (lenght=ncolumns) of dicts with the same keys. 
+                is pivoted to an array (length=nrows) of dicts with the same keys. 
                 [default: False]
 
     Output:
