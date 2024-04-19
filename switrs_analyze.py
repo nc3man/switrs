@@ -6,10 +6,10 @@ from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 
 # User variables
-inpath = 'C:/Users/karl/bike/vista/'
-crashes_file = inpath + 'Crashes_bike.csv'
-parties_file = inpath + 'Parties_bike.csv'
-victims_file = inpath + 'Victims_bike.csv'
+inpath = 'C:/Users/karl/bike/vista/240802/'
+crashes_file = inpath + 'Accident_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
+parties_file = inpath + 'Party_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
+victims_file = inpath + 'Victim_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
 out_file = inpath + 'SWITRS_Vista_2018-2023.csv'
 
 # Do not edit below this line --------------------------------------------------
@@ -19,14 +19,14 @@ out_file = inpath + 'SWITRS_Vista_2018-2023.csv'
 def get_parties(case_id, parties):
     party_found = []
     for party in parties:
-        if party['CASE_ID'] == case_id:
+        if party['case_id'] == case_id:
             party_found.append(party) 
     
-    # ensure that the party_found list is in PARTY_NUMBER order
+    # ensure that the party_found list is in party_number order
     parties_found = []
     for n in range(len(party_found)):
         for party in party_found:
-            if int(party['PARTY_NUMBER']) == n+1:
+            if int(party['party_number']) == n+1:
                 parties_found.append(party)
         
     return parties_found
@@ -34,39 +34,31 @@ def get_parties(case_id, parties):
 def get_victims(case_id, victims):
     victim_found = []
     for victim in victims:
-        if victim['CASE_ID'] == case_id:
+        if victim['case_id'] == case_id:
             victim_found.append(victim)
-       
-    # ensure that the victim_found list is in VICTIM_NUMBER order
-    victims_found = []
-    for n in range(len(victim_found)):
-        for victim in victim_found:
-            if int(victim['VICTIM_NUMBER']) == n+1:
-                victims_found.append(victim)
-                
-    return victims_found
+    return victim_found
       
 def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
-    case_id = crash['CASE_ID']
-    year = crash['ACCIDENT_YEAR']
-    date = crash['COLLISION_DATE']
-    time = split_hhmm(crash['COLLISION_TIME'])
-    if crash['INTERSECTION'] == 'Y':
-        location = crash['PRIMARY_RD'] + ' @ ' + crash['SECONDARY_RD']
+    case_id = crash['case_id']
+    year = crash['accident_year']
+    date = crash['collision_date']
+    time = split_hhmm(crash['collision_time'])
+    if crash['intersection'] == 'Y':
+        location = crash['primary_rd'] + ' @ ' + crash['secondary_rd']
     else:
-        location = crash['PRIMARY_RD'] + ' ' + f"{float(crash['DISTANCE']):.0f}" + 'ft ' \
-        + crash['DIRECTION'] + ' / ' + crash['SECONDARY_RD']
-    collision_type = decode_collision(crash['TYPE_OF_COLLISION'])
-    weather = decode_weather(crash['WEATHER_1'])
-    if len(decode_weather(crash['WEATHER_2'])) > 0:
-        weather = weather + ' & ' + decode_weather(crash['WEATHER_2'])
-    surface = decode_surface(crash['ROAD_SURFACE'])
+        location = crash['primary_rd'] + ' ' + f"{float(crash['distance']):.0f}" + 'ft ' \
+        + crash['direction'] + ' / ' + crash['secondary_rd']
+    collision_type = decode_collision(crash['type_of_collision'])
+    weather = decode_weather(crash['weather_1'])
+    if len(decode_weather(crash['weather_2'])) > 0:
+        weather = weather + ' & ' + decode_weather(crash['weather_2'])
+    surface = decode_surface(crash['road_surface'])
     weather_surface = weather + ' / ' + surface
-    pcf = decode_pcf(crash['PRIMARY_COLL_FACTOR'], crash['PCF_VIOL_CATEGORY'])
-    pcf_viol = crash['PCF_VIOLATION'] + '.' + crash['PCF_VIOL_SUBSECTION']
-    severity = decode_severity(int(crash['COLLISION_SEVERITY']))
-    int_turn = crash['INTERSECTION']
-    hit_run = decode_hit_run(crash['HIT_AND_RUN'])
+    pcf = decode_pcf(crash['primary_coll_factor'], crash['pcf_viol_category'])
+    pcf_viol = crash['pcf_violation'] + '.' + crash['pcf_viol_subsection']
+    severity = decode_severity(int(crash['collision_severity']))
+    int_turn = crash['intersection']
+    hit_run = decode_hit_run(crash['hit_and_run'])
     
     # add to output dictionary
     analyzed['Case_ID'].append(case_id)
@@ -87,19 +79,19 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     # Pull out relevant party data
     nparties = len(parties)
     for n in range(nparties):
-        p_age_sex = parties[n]['PARTY_AGE'] + '/' + parties[n]['PARTY_SEX']
-        p_dir = parties[n]['DIR_OF_TRAVEL']
-        p_movement = decode_movement(parties[n]['MOVE_PRE_ACC'])
-        p_type = decode_party_type(int(parties[n]['PARTY_TYPE']))
-        p_fault = parties[n]['AT_FAULT']
-        p_sobriety = decode_sobriety(parties[n]['PARTY_SOBRIETY'])
-        p_drugs = decode_drugs(parties[n]['PARTY_DRUG_PHYSICAL'])
-        p_oaf = decode_oaf(parties[n]['OAF_1'])
-        p_oaf_2 = decode_oaf(parties[n]['OAF_2'])
+        p_age_sex = parties[n]['party_age'] + '/' + parties[n]['party_sex']
+        p_dir = parties[n]['dir_of_travel']
+        p_movement = decode_movement(parties[n]['move_pre_acc'])
+        p_type = decode_party_type(int(parties[n]['party_type']))
+        p_fault = parties[n]['at_fault']
+        p_sobriety = decode_sobriety(parties[n]['party_sobriety'])
+        p_drugs = decode_drugs(parties[n]['party_drug_physical'])
+        p_oaf = decode_oaf(parties[n]['oaf_1'])
+        p_oaf_2 = decode_oaf(parties[n]['oaf_2'])
         if len(p_oaf_2) > 0:
             p_oaf = p_oaf + ' / ' + p_oaf_2
-        p_oaf_viol = decode_oaf_violation(parties[n]['OAF_VIOL_CAT'])
-        p_oaf_viol_cvc = parties[n]['OAF_VIOL_SECTION'] + '.' + parties[n]['OAF_VIOLATION_SUFFIX']
+        p_oaf_viol = decode_oaf_violation(parties[n]['oaf_viol_cat'])
+        p_oaf_viol_cvc = parties[n]['oaf_viol_section'] + '.' + parties[n]['oaf_violation_suffix']
         
         prefix = f'P{n+1}'
         print(f"{prefix}_Age/Sex:{p_age_sex} {prefix}_Type:{p_type} {prefix}_Dir:{p_dir} {prefix}_Movement:{p_movement} {prefix}_Fault:{p_fault} {prefix}_Sobriety:{p_sobriety} {prefix}_Drugs:{p_drugs} {prefix}_Other Associated Factors:{p_oaf} {prefix}_Other Associated Violation:{p_oaf_viol} {prefix}_OAF_CVC:{p_oaf_viol_cvc}")
@@ -132,9 +124,9 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     # Pull out relevant victim data
     nvictims = len(victims)
     for n in range(nvictims):
-        v_party = 'P' + victims[n]['PARTY_NUMBER']
-        v_role = decode_role(int(victims[n]['VICTIM_ROLE']))
-        v_injury = decode_injury(int(victims[n]['VICTIM_DEGREE_OF_INJURY']))
+        v_party = 'P' + victims[n]['party_number']
+        v_role = decode_role(int(victims[n]['victim_role']))
+        v_injury = decode_injury(int(victims[n]['victim_degree_of_injury']))
         
         prefix = f'V{n+1}'
         print(f"{prefix}_Party:{v_party} {prefix}_Role:{v_role} {prefix}_Injury:{v_injury}")
@@ -302,7 +294,7 @@ def decode_severity(code):
     elif code == 4:
         severity = 'Injury (Complaint of Pain)'
     elif code == 0:
-        severity = 'PDO'
+        severity = 'Property Damage Only'
     return severity
     
 def decode_party_type(code):
@@ -589,8 +581,8 @@ def main():
     nparty_max  = 0
     nvictim_max = 0
     for crash in crashes:
-        crash_parties = get_parties(crash['CASE_ID'], parties)
-        crash_victims = get_victims(crash['CASE_ID'], victims)
+        crash_parties = get_parties(crash['case_id'], parties)
+        crash_victims = get_victims(crash['case_id'], victims)
         if len(crash_parties) > nparty_max: nparty_max = len(crash_parties)
         if len(crash_victims) > nvictim_max: nvictim_max = len(crash_victims)
     
@@ -598,8 +590,8 @@ def main():
     n = 0
     analyzed = defaultdict(list)
     for crash in crashes:
-        crash_parties = get_parties(crash['CASE_ID'], parties)
-        crash_victims = get_victims(crash['CASE_ID'], victims)
+        crash_parties = get_parties(crash['case_id'], parties)
+        crash_victims = get_victims(crash['case_id'], victims)
         n+=1
         print(f"\nCrash {n} --  #parties: {len(crash_parties)}   #victims: {len(crash_victims)} ")
         
