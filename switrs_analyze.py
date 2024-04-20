@@ -147,8 +147,10 @@ def split_hhmm(time_digits):
     # reformat 4-digit time hhmm as hh:mm
     if len(time_digits) == 4:
         time = time_digits[0:2] + ':' + time_digits[2:]
+    elif len(time_digits) == 3:
+        time = time_digits[0:1] + ':' + time_digits[1:]
     else:
-        time = time_digits
+        time = '0:' + time_digits
     return time
       
 def decode_weather(code):
