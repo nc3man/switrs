@@ -87,7 +87,12 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
         p_sobriety = decode_sobriety(parties[n]['party_sobriety'])
         p_drugs = decode_drugs(parties[n]['party_drug_physical'])
         p_oaf = decode_oaf(parties[n]['oaf_1'])
+        p_inattention = decode_inattention(parties[n]['inattention'])
+        if p_oaf == 'Inattention' and len(p_inattention) > 0:
+            p_oaf = p_oaf + ': ' + p_inattention
         p_oaf_2 = decode_oaf(parties[n]['oaf_2'])
+        if p_oaf_2 == 'Inattention':
+            p_oaf_2 = p_oaf_2 + ': ' + p_inattention
         if len(p_oaf_2) > 0:
             p_oaf = p_oaf + ' / ' + p_oaf_2
         p_oaf_viol = decode_oaf_violation(parties[n]['oaf_viol_cat'])
@@ -393,6 +398,37 @@ def decode_oaf(code):
         oaf = ''
 
     return oaf
+    
+    
+def decode_inattention(code):
+    if code == 'A':
+        inattention = 'Cell Phone Handheld'
+    elif code == 'B':
+        inattention = 'Cell Phone Handsfree'
+    elif code == 'C':
+        inattention = 'Electronic Equipment'
+    elif code == 'D':
+        inattention = 'Radio/CD'
+    elif code == 'E':
+        inattention = 'Smoking'
+    elif code == 'F':
+        inattention = 'Eating'
+    elif code == 'G':
+        inattention = 'Children'
+    elif code == 'H': 
+        inattention = 'Animal'
+    elif code == 'I':
+        inattention = 'Personal Hygiene'
+    elif code == 'J':
+        inattention = 'Reading'
+    elif code == 'K':
+        inattention = 'Other'
+    elif code == 'P':
+        inattention = 'Cell Phone'
+    else:
+        inattention = ''
+
+    return inattention
     
 def decode_oaf_violation(code):
     if code == '01':
