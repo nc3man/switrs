@@ -6,11 +6,11 @@ from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 
 # User variables
-inpath = 'C:/Users/karl/bike/vista/240802/'
-crashes_file = inpath + 'Accident_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
-parties_file = inpath + 'Party_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
-victims_file = inpath + 'Victim_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
-out_file = inpath + 'SWITRS_Vista_2018-2023.csv'
+inpath = 'C:/Users/karl/bike/sdcbc/advocacy/encinitas/switrs/'
+crashes_file = inpath + 'Accident_242638.csv'
+parties_file = inpath + 'Party_242638.csv'
+victims_file = inpath + 'Victim_242638.csv'
+out_file = inpath + 'SWITRS_Encinitas_2020-2024-Oct.csv'
 
 # Do not edit below this line --------------------------------------------------
 
