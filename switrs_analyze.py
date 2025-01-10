@@ -6,11 +6,11 @@ from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 
 # User variables
-inpath = 'C:/Users/karl/bike/vista/240802/'
-crashes_file = inpath + 'Accident_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
-parties_file = inpath + 'Party_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
-victims_file = inpath + 'Victim_240802 2018 - Av. 2022-Dec 31, 2023 SWITRS Raw Data for Bicycle Crashes_Vista.csv'
-out_file = inpath + 'SWITRS_Vista_2018-2023.csv'
+inpath = 'C:/Users/karl/bike/sdcbc/advocacy/encinitas/switrs/'
+crashes_file = inpath + 'Accident_242638.csv'
+parties_file = inpath + 'Party_242638.csv'
+victims_file = inpath + 'Victim_242638.csv'
+out_file = inpath + 'SWITRS_Encinitas_2020-2024-Oct.csv'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -144,9 +144,11 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     return analyzed
     
 def split_hhmm(time_digits):
-    # reformat 4-digit time hhmm as hh:mm
+    # reformat time hhmm as hh:mm
     if len(time_digits) == 4:
         time = time_digits[0:2] + ':' + time_digits[2:]
+    elif len(time_digits) == 3:
+        time = time_digits[0:1] + ':' + time_digits[1:]
     else:
         time = time_digits
     return time
