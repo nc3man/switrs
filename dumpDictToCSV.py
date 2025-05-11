@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-def dumpDictToCSV(dictList, csvFile, delimiter, header):
+def dumpDictToCSV(dictList, csvFile, delimiter, header, encoding='utf-8'):
     """
     Purpose: dumps dictionary to CSV file
 
@@ -15,6 +15,7 @@ def dumpDictToCSV(dictList, csvFile, delimiter, header):
                 of the string values contained in dictList or its keys.
         header  - list of keys in order for output columns. These must match the
                 keys, but possibly in different order
+        encoding - Specify encoding if some characters are not utf-8
 
     Output:
         The CSV file in cvsFile contains the dictionary data where the first
@@ -30,7 +31,7 @@ def dumpDictToCSV(dictList, csvFile, delimiter, header):
     for n in range(ncols):
         quote_header.append(f'"{header[n]}"')
 
-    fileObj=open(csvFile, 'w')
+    fileObj=open(csvFile, 'w', encoding=encoding)
     fileObj.write(delimiter.join(quote_header)+newline)
 
     for row in range(nrows):
@@ -40,7 +41,6 @@ def dumpDictToCSV(dictList, csvFile, delimiter, header):
                 dumpLine.append('"'+dictList[header[col]][row]+'"')
             else:
                 dumpLine.append(str(dictList[header[col]][row]))
-
         fileObj.write(delimiter.join(dumpLine)+newline)
 
     fileObj.close

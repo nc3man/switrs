@@ -1,7 +1,7 @@
 import csv
 from collections import defaultdict
 
-def getDataCsv( csvFile, delimiter, pivot=False ):
+def getDataCsv( csvFile, delimiter, pivot=False, encoding='utf-8'):
     """
     Usage: data, header = getDataCsv( csvFile, delimiter, pivot=False )
     
@@ -29,12 +29,11 @@ def getDataCsv( csvFile, delimiter, pivot=False ):
     data = defaultdict(list)
     
     ## open the file and attach the CSV reader object
-    with open(csvFile) as csvf:
+    
+    with open(csvFile, encoding=encoding) as csvf:
         reader = csv.reader(csvf, delimiter=delimiter, quotechar='"')
         for row in reader:
-            
-            if reader.line_num==1:         
-            
+            if reader.line_num==1:                     
                 ## pull the header strings from the first line
                 header = row
                 ncols = len(header)
@@ -42,8 +41,11 @@ def getDataCsv( csvFile, delimiter, pivot=False ):
                 while len(header[-1])==0:  # check to see if last field is nil
                     ncols = ncols-1
                     del(header[ncols])
+                    
+                # remove leading and trailing whitespace that could clutter header
+                header = [h.strip() for h in header]
+
             else:
-                
                 ## append each row to a growing dictionary. Keys are the header 
                 # fields and each column is just a list of strings to begin with
                 for i in range(ncols):
