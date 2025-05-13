@@ -4,13 +4,13 @@
 from collections import defaultdict
 from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
+import numpy as np
 import time
 
 # User variables
 years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
 search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar']
 inpath = 'C:/Users/karl/python/switrs/CCRS/'
-
 outpath = 'C:/Users/karl/python/switrs/CCRS/'
 
 # Do not edit below this line --------------------------------------------------
@@ -23,6 +23,7 @@ INJURY_TABLE_KEYS = []
 for person in INJURY_PERSON_TYPE:
     for injury in INJURY_TYPE:
         INJURY_TABLE_KEYS.append(f'{person}-{injury}')
+INJURY_FATAL_KEYS = np.array(['Fatal' in key for key in INJURY_TABLE_KEYS], dtype=bool)
 
 # Helper functions
 
@@ -125,12 +126,13 @@ def distill(crash, parties, injureds, analyzed, nparty_max, ninjured_max):
     analyzed['PCF Party Num'].append(pcf_party)
     analyzed['Cited'].append(cited)
     analyzed['Hit & Run'].append(hit_run)
-    analyzed['Num Parties'].append(nparties)
+    analyzed['Num Parties'].append(str(nparties))
     analyzed['Num Killed'].append(num_killed)
     analyzed['Num Injured'].append(num_injured)
     
     # fill in injury counts table for this crash
     analyzed = add_injury_counts(analyzed, injureds)
+    
                    
     # add in parties in party_number order
     for party in parties:
@@ -150,6 +152,10 @@ def add_party(analyzed, party):
     p_sex = party['GenderDescription']
     try:
         p_dir = party['InattentionDirectionOfTravel']
+        if len(p_dir) > 1:  # contains InAttention info - direction is last
+            dir = p_dir[-1]
+            inattention = p_dir[0:len(p_dir)-1]
+            p_dir = f'{dir}-{inattention}'
     except:
         p_dir = party['DirectionOfTravel'] # before 2016
     p_lane = party['Lane']
@@ -175,7 +181,7 @@ def add_party(analyzed, party):
     analyzed[f'{prefix} Fault'].append(p_fault)
     analyzed[f'{prefix} Other Assoc Factor'].append(p_oaf)
     analyzed[f'{prefix} Lane'].append(p_lane)
-    analyzed[f'{prefix} Dir'].append(p_dir)
+    analyzed[f'{prefix} Dir-InAttention'].append(p_dir)
     analyzed[f'{prefix} Movement'].append(p_movement)
     analyzed[f'{prefix} SpeedLimit'].append(p_speed_limit)
     analyzed[f'{prefix} Vehicle'].append(p_vehicle)
@@ -194,7 +200,7 @@ def add_empty_party(analyzed, p_num):
     analyzed[f'{prefix} Fault'].append('')  
     analyzed[f'{prefix} Other Assoc Factor'].append('')  
     analyzed[f'{prefix} Lane'].append('')    
-    analyzed[f'{prefix} Dir'].append('')
+    analyzed[f'{prefix} Dir-InAttention'].append('')
     analyzed[f'{prefix} Movement'].append('')
     analyzed[f'{prefix} SpeedLimit'].append('')
     analyzed[f'{prefix} Vehicle'].append('')
@@ -206,8 +212,10 @@ def add_injury_counts(analyzed, injureds):
     
     # If no injuries return 0's
     if not(injureds):
+        analyzed['NumKilled_calc'].append('0')
+        analyzed['NumInjured_calc'].append('0')
         for key in INJURY_TABLE_KEYS:
-            analyzed[key].append(0)
+            analyzed[key].append('0')
         return analyzed
         
     injury_table = {key: 0 for key in INJURY_TABLE_KEYS}
@@ -227,9 +235,17 @@ def add_injury_counts(analyzed, injureds):
                 break
 
         injury_table[f'{person}-{injury}'] += 1
+ 
+    table_num = np.array([injury_table[key] for key in INJURY_TABLE_KEYS],dtype=int)
+    fatal_num = table_num[INJURY_FATAL_KEYS]
+    num_killed = fatal_num.sum()
+    num_injured = table_num.sum()-num_killed
+    
+    analyzed['NumKilled_calc'].append(str(num_killed))
+    analyzed['NumInjured_calc'].append(str(num_injured))
         
     for key in INJURY_TABLE_KEYS:
-        analyzed[key].append(injury_table[key])
+        analyzed[key].append(str(injury_table[key]))
         
     return analyzed
     

@@ -5,12 +5,12 @@ from collections import defaultdict
 from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 import time
-import sys
 
 # User variables
 years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
 search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar']
 inpath = 'C:/Users/karl/python/switrs/CCRS/'
+outpath = 'C:/Users/karl/python/switrs/CCRS/'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -18,17 +18,15 @@ inpath = 'C:/Users/karl/python/switrs/CCRS/'
 
 def get_crashes(crashes, crash_keys, city_name):
     crashes_trim = defaultdict(list)
-    collision_ids = []
     ncrashes = len(crashes['Collision Id'])
 
     # trim large dataset down to desired city
     for n in range(ncrashes):
         if crashes["City Name"][n] == city_name:
-            collision_ids.append(crashes['Collision Id'][n])
             for key in crash_keys:
                 crashes_trim[key].append(crashes[key][n])
 
-    return crashes_trim, collision_ids
+    return crashes_trim
 
 def get_parties(parties, party_keys, collision_ids):
     parties_trim = defaultdict(list)
@@ -57,7 +55,7 @@ def get_injureds(injureds, injured_keys, collision_ids):
 
 # End helper functions ---------------------------------------------------------
 
-def run_filters(city_search,year, crashes_year,parties_year,injureds_year,crash_keys,party_keys,injured_keys):
+def run_filters(city_search,year, crashes_all, parties_all, injureds_all, crash_keys, party_keys, injured_keys):
 
     # while large datasets for a single year are in memory, run through each city
 
@@ -66,32 +64,32 @@ def run_filters(city_search,year, crashes_year,parties_year,injureds_year,crash_
         begtime = time.perf_counter()
 
         # filter crashes based on City Name
-        crashes, collision_ids = get_crashes(crashes_year, crash_keys, city)
+        crashes = get_crashes(crashes_all, crash_keys, city)
         print(f"\nTime to filter {city} crashes: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
 
-        # now filter parties based on matched collision_ids
-        parties = get_parties(parties_year, party_keys, collision_ids)
+        # now filter parties based on matched "Collision_Id"
+        parties = get_parties(parties_all, party_keys, crashes['Collision Id'])
         print(f"Time to trim parties by {city} crash[CollisionID]s: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
 
-        # now filter injureds based on matched collision_ids
-        injureds = get_injureds(injureds_year, injured_keys, collision_ids)
+        # then filter injureds based on matched "Collision_Id"
+        injureds = get_injureds(injureds_all, injured_keys, crashes['Collision Id'])
         print(f"Time to trim injureds to {city} crash[CollisionID]s: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
 
         # save filtered dictionaries to CSV files
         out_file_suffix = f'{city}_' + year + '.csv'
 
-        crash_out = inpath + 'CCRS_crashes_' + out_file_suffix
+        crash_out = outpath + 'CCRS_crashes_' + out_file_suffix
         dumpDictToCSV(crashes, crash_out, ',',  crash_keys, encoding='cp850')
         print(f"\n{len(crashes['Collision Id'])} Filtered Crashes saved in {crash_out}")
 
-        party_out = inpath + 'CCRS_parties_' + out_file_suffix
+        party_out = outpath + 'CCRS_parties_' + out_file_suffix
         dumpDictToCSV(parties, party_out, ',',  party_keys, encoding='cp850')
         print(f"{len(parties['CollisionId'])} Filtered parties saved in {party_out}")
 
-        injured_out = inpath + 'CCRS_injured_' + out_file_suffix
+        injured_out = outpath + 'CCRS_injured_' + out_file_suffix
         dumpDictToCSV(injureds, injured_out, ',',  injured_keys, encoding='cp850')
         print(f"{len(injureds['CollisionId'])} Filtered injureds saved in {injured_out}")
 
@@ -125,7 +123,7 @@ def main():
 
         run_filters(search_cities, year, crashes, parties, injureds, crash_keys, party_keys, injured_keys)
 
-    print(f"\nTotal time to distill all {len(years)*len(search_cities)} years & cities: {time.perf_counter()-begtime_all:.4f} sec")
+    print(f"\nTotal time to distill {len(years)} years and {len(search_cities)} cities: {time.perf_counter()-begtime_all:.4f} sec")
 
 # Main body
 if __name__ == '__main__':
