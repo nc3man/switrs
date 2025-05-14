@@ -19,7 +19,7 @@ outpath = 'C:/Users/karl/python/switrs/CCRS/'
 # Globals
 M2FT = 3.280839895 # convert meters to feet
 INJURY_PERSON_TYPE = ['Driver', 'Bicyclist', 'Pedestrian', 'Passenger', 'Other' ]               
-INJURY_TYPE = ['Fatal', 'Serious', 'Minor', 'Possible', 'Pain', 'Other' ]               
+INJURY_TYPE = ['Fatal', 'Severe', 'Serious', 'Minor', 'Possible', 'Pain', 'Other' ]               
 INJURY_TABLE_KEYS = []
 for person in INJURY_PERSON_TYPE:
     for injury in INJURY_TYPE:
@@ -144,7 +144,8 @@ def distill(crash, parties, injureds, nparty_max, analyzed, issues):
                    
     # add in parties in party_number order
     for party in parties:
-        analyzed = add_party(analyzed, party)
+        injured_party = [injured for injured in injureds if injured['PartyNumber']==party['PartyNumber']]
+        analyzed = add_party(analyzed, party, injured_party)
         
     #  Fill in nulls when nparties < nparty_max
     for n in range(nparties, nparty_max):
@@ -152,7 +153,7 @@ def distill(crash, parties, injureds, nparty_max, analyzed, issues):
                 
     return analyzed, issues
  
-def add_party(analyzed, party):
+def add_party(analyzed, party, injured_party):
     # Pull out relevant party data
     p_num = party['PartyNumber']
     p_type = party['PartyType']
@@ -178,6 +179,16 @@ def add_party(analyzed, party):
         p_oaf = party['Other Associate Factor']
     except:
         p_oaf = ''    # before 2016
+        
+    # concatenate pertinent injured info corresponding to this party
+    p_injured_list = ''
+    p_injury_extent_list = ''
+    if len(injured_party) > 0:
+        for injured in injured_party:
+            p_injured_list = p_injured_list + f"{injured['InjuredPersonType']},"
+            p_injury_extent_list = p_injury_extent_list + f"{injured['ExtentOfInjuryCode']},"
+        p_injured_list = p_injured_list[0:-1]  # strip trailing comma
+        p_injury_extent_list = p_injury_extent_list[0:-1]  # strip trailing comma
 
     prefix = f'P{p_num}'
 
@@ -196,6 +207,10 @@ def add_party(analyzed, party):
 
     analyzed[f'{prefix} Sobriety'].append(p_sobriety)
     
+    # add in associated injured persons lists
+    analyzed[f'{prefix} Assoc Injured list'].append(p_injured_list)
+    analyzed[f'{prefix} Assoc Injury Extent list'].append(p_injury_extent_list)
+    
     return analyzed
 
 def add_empty_party(analyzed, p_num):
@@ -213,7 +228,9 @@ def add_empty_party(analyzed, p_num):
     analyzed[f'{prefix} SpeedLimit'].append('')
     analyzed[f'{prefix} Vehicle'].append('')
     analyzed[f'{prefix} Sobriety'].append('')
-    
+    analyzed[f'{prefix} Assoc Injured list'].append('')
+    analyzed[f'{prefix} Assoc Injury Extent list'].append('')
+
     return analyzed
     
 def add_injury_counts(analyzed, injureds):
