@@ -79,7 +79,7 @@ def run_filters(city_search,year, crashes_all, parties_all, injureds_all, crash_
         begtime = time.perf_counter()
 
         # save filtered dictionaries to CSV files
-        out_file_suffix = f'{city}_' + year + '.csv'
+        out_file_suffix = f'{city}_{year}.csv'
 
         crash_out = outpath + 'CCRS_crashes_' + out_file_suffix
         dumpDictToCSV(crashes, crash_out, ',',  crash_keys, encoding='cp850')
@@ -123,7 +123,7 @@ def main():
 
         run_filters(search_cities, year, crashes, parties, injureds, crash_keys, party_keys, injured_keys)
 
-    print(f"\nTotal time to distill {len(years)} years and {len(search_cities)} cities: {time.perf_counter()-begtime_all:.4f} sec")
+    print(f"\nTotal time to pull CCRS records for {len(years)} years and {len(search_cities)} cities: {time.perf_counter()-begtime_all:.4f} sec")
 
 # Main body
 if __name__ == '__main__':

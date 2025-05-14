@@ -6,6 +6,7 @@ from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 import numpy as np
 import time
+import os
 
 # User variables
 years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
@@ -24,6 +25,8 @@ for person in INJURY_PERSON_TYPE:
     for injury in INJURY_TYPE:
         INJURY_TABLE_KEYS.append(f'{person}-{injury}')
 INJURY_FATAL_KEYS = np.array(['Fatal' in key for key in INJURY_TABLE_KEYS], dtype=bool)
+
+logpath = outpath + 'logs/'
 
 # Helper functions
 
@@ -49,7 +52,7 @@ def get_injureds(collision_id, injureds):
             injured_found.append(injured)
     return injured_found
       
-def distill(crash, parties, injureds, analyzed, nparty_max, ninjured_max):
+def distill(crash, parties, injureds, nparty_max, analyzed, issues):
     nparties = len(parties)
     ninjureds = len(injureds)
     
@@ -127,12 +130,17 @@ def distill(crash, parties, injureds, analyzed, nparty_max, ninjured_max):
     analyzed['Cited'].append(cited)
     analyzed['Hit & Run'].append(hit_run)
     analyzed['Num Parties'].append(str(nparties))
-    analyzed['Num Killed'].append(num_killed)
-    analyzed['Num Injured'].append(num_injured)
     
     # fill in injury counts table for this crash
     analyzed = add_injury_counts(analyzed, injureds)
     
+    # CCRS total injury counts may differ from our count - record any deltas
+    if num_injured != analyzed['Num Injured'][-1]:
+        issues['logfile'].write(f'CID:{collision_id} CCRS num_injured={num_injured} != Calculated num_injured={analyzed['Num Injured'][-1]}\n')
+        issues['nwarnings'] += 1
+    if num_killed != analyzed['Num Killed'][-1]:
+        issues['logfile'].write(f'CID:{collision_id} CCRS num_killed={num_killed} != Calculated num_killed={analyzed['Num Killed'][-1]}\n')
+        issues['nwarnings'] += 1
                    
     # add in parties in party_number order
     for party in parties:
@@ -142,7 +150,7 @@ def distill(crash, parties, injureds, analyzed, nparty_max, ninjured_max):
     for n in range(nparties, nparty_max):
         analyzed = add_empty_party(analyzed, str(n+1))
                 
-    return analyzed
+    return analyzed, issues
  
 def add_party(analyzed, party):
     # Pull out relevant party data
@@ -212,8 +220,8 @@ def add_injury_counts(analyzed, injureds):
     
     # If no injuries return 0's
     if not(injureds):
-        analyzed['NumKilled_calc'].append('0')
-        analyzed['NumInjured_calc'].append('0')
+        analyzed['Num Killed'].append('0')
+        analyzed['Num Injured'].append('0')
         for key in INJURY_TABLE_KEYS:
             analyzed[key].append('0')
         return analyzed
@@ -241,8 +249,8 @@ def add_injury_counts(analyzed, injureds):
     num_killed = fatal_num.sum()
     num_injured = table_num.sum()-num_killed
     
-    analyzed['NumKilled_calc'].append(str(num_killed))
-    analyzed['NumInjured_calc'].append(str(num_injured))
+    analyzed['Num Killed'].append(str(num_killed))
+    analyzed['Num Injured'].append(str(num_injured))
         
     for key in INJURY_TABLE_KEYS:
         analyzed[key].append(str(injury_table[key]))
@@ -272,6 +280,14 @@ def decode_hit_run(hit_run):
     else:
         desc = ' '
     return desc
+    
+def open_append(filename):
+    # First check to see if it exists - will delete to open new file
+    if os.path.exists(filename):
+        os.remove(filename)
+    # Create new file and open in append mode
+    file_obj = open(filename, 'a')
+    return file_obj
     
 # End helper functions ---------------------------------------------------------
 
@@ -306,18 +322,29 @@ def main():
             
             # distill data for each crash
             analyzed = defaultdict(list)
+            logfile = f'{logpath}warnings_{search_city}_{year}.txt'
+            issues = {'logfile': open_append(logfile), 'nwarnings':0}
+            
             for crash in crashes:
                 crash_parties = get_parties(crash['Collision Id'], parties)
                 crash_injureds = get_injureds(crash['Collision Id'], injureds)
         
-                analyzed = distill(crash, crash_parties, crash_injureds, analyzed, nparty_max, ninjured_max)
+                analyzed, issues = distill(crash, crash_parties, crash_injureds, nparty_max, analyzed, issues)
                 
             # save analyzed dictionary to CSV file
             dumpDictToCSV(analyzed, out_file, ',',  list(analyzed.keys()))
             print(f"\nOutput saved in {out_file}")            
             print(f"Time to distill into readable spreadsheet: {time.perf_counter()-begtime:.4f} sec")
             
-    print(f"\nTotal time to distill all {len(years)*len(search_cities)} years & cities: {time.perf_counter()-begtime_all:.4f} sec")
+            # See if any issues occurred
+            issues['logfile'].close()
+            if issues['nwarnings'] > 0:
+                print(f'ISSUES FOUND! see {issues['nwarnings']} messages in {logfile}')
+            else:
+                os.remove(logfile)
+            
+    print(f"\nTotal time to distill CCRS records for {len(years)} years and {len(search_cities)} cities: {time.perf_counter()-begtime_all:.4f} sec")
+
    
 # Main body
 if __name__ == '__main__':
