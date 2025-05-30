@@ -8,9 +8,9 @@ import time
 
 # User variables
 years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar']
-inpath = 'C:/Users/karl/python/switrs/CCRS/'
-outpath = 'C:/Users/karl/python/switrs/CCRS/'
+search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
+inpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
+outpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
 
 # Do not edit below this line --------------------------------------------------
 

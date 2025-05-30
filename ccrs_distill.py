@@ -10,16 +10,17 @@ import os
 
 # User variables
 years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar']
-inpath = 'C:/Users/karl/python/switrs/CCRS/'
+search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
+inpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
 outpath = 'C:/Users/karl/python/switrs/CCRS/'
 
 # Do not edit below this line --------------------------------------------------
 
 # Globals
 M2FT = 3.280839895 # convert meters to feet
-INJURY_PERSON_TYPE = ['Driver', 'Bicyclist', 'Pedestrian', 'Passenger', 'Other' ]               
-INJURY_TYPE = ['Fatal', 'Severe', 'Serious', 'Minor', 'Possible', 'Pain', 'Other' ]               
+INJURY_PERSON_TYPE = ['Driver', 'Bicyclist', 'Pedestrian', 'Passenger', 'Other']               
+INJURY_TYPE =['Fatal','SuspectSerious','SuspectMinor','PossibleInjury']
+
 INJURY_TABLE_KEYS = []
 for person in INJURY_PERSON_TYPE:
     for injury in INJURY_TYPE:
@@ -132,7 +133,7 @@ def distill(crash, parties, injureds, nparty_max, analyzed, issues):
     analyzed['Num Parties'].append(str(nparties))
     
     # fill in injury counts table for this crash
-    analyzed = add_injury_counts(analyzed, injureds)
+    analyzed = add_injury_counts(analyzed, injureds, issues)
     
     # CCRS total injury counts may differ from our count - record any deltas
     if num_injured != analyzed['Num Injured'][-1]:
@@ -186,7 +187,7 @@ def add_party(analyzed, party, injured_party):
     if len(injured_party) > 0:
         for injured in injured_party:
             p_injured_list = p_injured_list + f"{injured['InjuredPersonType']},"
-            p_injury_extent_list = p_injury_extent_list + f"{injured['ExtentOfInjuryCode']},"
+            p_injury_extent_list = p_injury_extent_list + f"{get_injury_extent(injured['ExtentOfInjuryCode'])},"
         p_injured_list = p_injured_list[0:-1]  # strip trailing comma
         p_injury_extent_list = p_injury_extent_list[0:-1]  # strip trailing comma
 
@@ -232,32 +233,52 @@ def add_empty_party(analyzed, p_num):
     analyzed[f'{prefix} Assoc Injury Extent list'].append('')
 
     return analyzed
-    
-def add_injury_counts(analyzed, injureds):
+
+def get_injury_extent(extent_of_injury):
+    if extent_of_injury == 'Fatal':
+        injury = 'Fatal'
+    elif extent_of_injury=='SuspectSerious' or extent_of_injury=='SevereInactive':
+        injury = 'SuspectSerious'
+    elif extent_of_injury=='SuspectMinor' or extent_of_injury=='ComplaintOfPainInactive':
+        injury = 'SuspectMinor'
+    elif extent_of_injury=='PossibleInjury' or extent_of_injury=='OtherVisibleInactive':
+        injury = 'PossibleInjury'
+    else:
+        injury = 'Unknown'
+        
+    return injury
+
+def add_injury_counts(analyzed, injureds, issues):
     
     # If no injuries return 0's
     if not(injureds):
         analyzed['Num Killed'].append('0')
         analyzed['Num Injured'].append('0')
         for key in INJURY_TABLE_KEYS:
-            analyzed[key].append('0')
+                analyzed[key].append('0')
         return analyzed
         
     injury_table = {key: 0 for key in INJURY_TABLE_KEYS}
     for injured in injureds:
         p_type = injured['InjuredPersonType']
-        person = 'Other'  # default no match
+        person = 'Unknown'  # default no match
         for s in INJURY_PERSON_TYPE:
             if s.lower() in p_type.lower():
                 person = s
                 break
-           
+        if person == 'Unknown': 
+            # log exception
+            issues['logfile'].write(f'CID:{analyzed['CollisionId'][-1]} Unexpected Injured Person type = {p_type}\n')
+            issues['nwarnings'] += 1
+            continue
+        
         inj_type = injured['ExtentOfInjuryCode']
-        injury = 'Other'  # default no match
-        for s in INJURY_TYPE:
-            if s.lower() in inj_type.lower():
-                injury = s
-                break
+        injury = get_injury_extent(inj_type)
+        if injury == 'Unknown':
+            # log exception
+            issues['logfile'].write(f'CID:{analyzed['CollisionId'][-1]} Unexpected Extent of Injury = {inj_type}\n')
+            issues['nwarnings'] += 1
+            continue
 
         injury_table[f'{person}-{injury}'] += 1
  
@@ -268,7 +289,7 @@ def add_injury_counts(analyzed, injureds):
     
     analyzed['Num Killed'].append(str(num_killed))
     analyzed['Num Injured'].append(str(num_injured))
-        
+           
     for key in INJURY_TABLE_KEYS:
         analyzed[key].append(str(injury_table[key]))
         
