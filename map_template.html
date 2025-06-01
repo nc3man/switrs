@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Click draw icon to select polygonal area</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
+  <script>
+    let pyHandler;
+    new QWebChannel(qt.webChannelTransport, function (channel) {
+      pyHandler = channel.objects.pyHandler;
+    });
+
+    const map = L.map('map').setView([LAT_CENTER, LON_CENTER], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '¬© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Load local KML
+    fetch('crash_placemarks.kml')
+    .then(response => response.text())
+    .then(str => new window.DOMParser().parseFromString(str, 'text/xml'))
+    .then(kml => {
+	    // Define the styles map
+        const styles = {};
+
+        // Parse all <Style> elements and populate the map
+        kml.querySelectorAll('Style').forEach(style => {
+            const id = style.getAttribute('id');
+            const href = style.querySelector('Icon href')?.textContent;
+            if (id && href) {
+                styles[`#${id}`] = href; // prepend '#' to match <styleUrl>#id
+            }
+        });
+
+        // Now loop through placemarks
+        const placemarks = kml.querySelectorAll('Placemark');
+		placemarks.forEach(pm => {
+			const name = pm.querySelector('name')?.textContent || 'Unnamed';
+			const desc = pm.querySelector('description')?.textContent || '';
+			const coords = pm.querySelector('coordinates')?.textContent.trim();
+			const styleUrl = pm.querySelector('styleUrl')?.textContent.trim();
+
+			if (!coords) return;
+			const [lng, lat] = coords.split(',').map(parseFloat);
+
+			// Choose the icon based on style or fallback
+			const iconHref = styles[styleUrl] || 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
+
+			const icon = L.icon({
+				iconUrl: iconHref,
+				iconSize: [32, 32],
+				iconAnchor: [16, 32],
+				popupAnchor: [0, -32],
+		});
+
+		L.marker([lat, lng], { icon })
+			.addTo(map)
+			.bindPopup(`<b>${name}</b><br>${desc}`);
+		});
+	})
+	.catch(err => console.error('Error loading KML:', err));
+
+    // Draw polygon
+    const drawnItems = new L.FeatureGroup().addTo(map);
+    const drawControl = new L.Control.Draw({
+      draw: {
+        polygon: true,
+        polyline: false,
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false
+      },
+      edit: { featureGroup: drawnItems }
+    });
+    map.addControl(drawControl);
+
+    map.on(L.Draw.Event.CREATED, function (e) {
+      const layer = e.layer;
+      drawnItems.clearLayers();
+      drawnItems.addLayer(layer);
+
+      const latlngs = layer.getLatLngs()[0]; // outer ring
+      const coords = latlngs.map(pt => ({ lat: pt.lat, lng: pt.lng }));
+
+      if (pyHandler) {
+        pyHandler.sendCoordinates(JSON.stringify(coords));
+      }
+    });
+  </script>
+</body>
+</html>
