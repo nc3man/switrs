@@ -123,7 +123,7 @@ def distill(crash, parties, injureds, nparty_max, logger):
     analyzed['Num Parties'] = str(nparties)
     
     # fill in injury counts table for this crash
-    analyzed, logger = add_injury_counts(analyzed, injureds, logger)
+    analyzed = add_injury_counts(analyzed, injureds, logger)
     
     # CCRS total injury counts may differ from our count - record any deltas
     if num_injured != analyzed['Num Injured']:
@@ -142,7 +142,7 @@ def distill(crash, parties, injureds, nparty_max, logger):
     for n in range(nparties, nparty_max):
         analyzed = add_empty_party(analyzed, str(n+1))
                 
-    return analyzed, logger
+    return analyzed
     
 def add_party(analyzed, party, injured_party):
     # Pull out relevant party data
@@ -246,7 +246,7 @@ def add_injury_counts(analyzed, injureds, logger):
         analyzed['Num Injured'] = '0'
         for key in INJURY_TABLE_KEYS:
                 analyzed[key] = '0'
-        return analyzed, logger
+        return analyzed
         
     injury_table = {key: 0 for key in INJURY_TABLE_KEYS}
     for injured in injureds:
@@ -283,7 +283,7 @@ def add_injury_counts(analyzed, injureds, logger):
     for key in INJURY_TABLE_KEYS:
         analyzed[key] = str(injury_table[key])
         
-    return analyzed, logger
+    return analyzed
     
 def decode_pcf(pcf):
     if pcf == 'A':
@@ -354,7 +354,7 @@ def main():
                 crash_parties = get_parties(crash['Collision Id'], parties)  # in party order
                 crash_injureds = [injured for injured in injureds if injured['CollisionId']==crash['Collision Id']]
 
-                crash_distill, logger = distill(crash, crash_parties, crash_injureds, nparty_max, logger)
+                crash_distill = distill(crash, crash_parties, crash_injureds, nparty_max, logger)
                 analyzed.append(crash_distill)
                 
             # save analyzed dictionary to CSV file (use keys from the last crash)
