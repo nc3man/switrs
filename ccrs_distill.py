@@ -123,7 +123,7 @@ def distill(crash, parties, injureds, nparty_max, logger):
     analyzed['Num Parties'] = str(nparties)
     
     # fill in injury counts table for this crash
-    analyzed = add_injury_counts(analyzed, injureds, logger)
+    add_injury_counts(analyzed, injureds, logger)
     
     # CCRS total injury counts may differ from our count - record any deltas
     if num_injured != analyzed['Num Injured']:
@@ -136,11 +136,11 @@ def distill(crash, parties, injureds, nparty_max, logger):
     # add in parties in party_number order
     for party in parties:
         injured_party = [injured for injured in injureds if injured['PartyNumber']==party['PartyNumber']]
-        analyzed = add_party(analyzed, party, injured_party)
+        add_party(analyzed, party, injured_party)
         
     #  Fill in nulls when nparties < nparty_max
     for n in range(nparties, nparty_max):
-        analyzed = add_empty_party(analyzed, str(n+1))
+        add_empty_party(analyzed, str(n+1))
                 
     return analyzed
     
@@ -201,8 +201,6 @@ def add_party(analyzed, party, injured_party):
     # add in associated injured persons lists
     analyzed[f'{prefix} Assoc Injured list'] = p_injured_list
     analyzed[f'{prefix} Assoc Injury Extent list'] = p_injury_extent_list
-    
-    return analyzed
 
 def add_empty_party(analyzed, p_num):
     prefix = f'P{p_num}'
@@ -221,8 +219,6 @@ def add_empty_party(analyzed, p_num):
     analyzed[f'{prefix} Sobriety'] = ''
     analyzed[f'{prefix} Assoc Injured list'] = ''
     analyzed[f'{prefix} Assoc Injury Extent list'] = ''
-
-    return analyzed
 
 def get_injury_extent(extent_of_injury):
     if extent_of_injury == 'Fatal':
@@ -282,8 +278,6 @@ def add_injury_counts(analyzed, injureds, logger):
            
     for key in INJURY_TABLE_KEYS:
         analyzed[key] = str(injury_table[key])
-        
-    return analyzed
     
 def decode_pcf(pcf):
     if pcf == 'A':
