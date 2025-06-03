@@ -6,11 +6,11 @@ from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 
 # User variables
-inpath = 'C:/Users/karl/bike/vista/'
-crashes_file = inpath + 'Crashes_bike.csv'
-parties_file = inpath + 'Parties_bike.csv'
-victims_file = inpath + 'Victims_bike.csv'
-out_file = inpath + 'SWITRS_Vista_2018-2023.csv'
+inpath = 'C:/Users/karl/bike/sdcbc/advocacy/encinitas/TIMS/'
+crashes_file = inpath + 'Crashes_TIMS_2013-2019.csv'
+parties_file = inpath + 'Parties_TIMS_2013-2019.csv'
+victims_file = inpath + 'Victims_TIMS_2013-2019.csv'
+out_file = inpath + 'TIMS_Encinitas_2013-2019.csv'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -56,6 +56,8 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     else:
         location = crash['PRIMARY_RD'] + ' ' + f"{float(crash['DISTANCE']):.0f}" + 'ft ' \
         + crash['DIRECTION'] + ' / ' + crash['SECONDARY_RD']
+    latitude = crash['POINT_Y']
+    longitude = crash['POINT_X']
     collision_type = decode_collision(crash['TYPE_OF_COLLISION'])
     weather = decode_weather(crash['WEATHER_1'])
     if len(decode_weather(crash['WEATHER_2'])) > 0:
@@ -74,6 +76,8 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     analyzed['Date'].append(date)
     analyzed['Time'].append(time)
     analyzed['Location'].append(location)
+    analyzed['Latitude'].append(latitude)
+    analyzed['Longitude'].append(longitude)
     analyzed['Weather/Surface'].append(weather_surface)
     analyzed['Collision Type'].append(collision_type)
     analyzed['Primary Collision Factor'].append(pcf)

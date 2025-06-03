@@ -1,9 +1,8 @@
 #!/user/bin/env python3 -tt
 
 # Imports
-from collections import defaultdict
-from dumpDictToCSV import dumpDictToCSV
-from getDataCsv import getDataCsv
+from dumpDictToCSV import dumpListDictToCSV
+from getDataCsv import getListDictCsv
 import numpy as np
 import time
 import os
@@ -32,10 +31,7 @@ logpath = outpath + 'logs/'
 # Helper functions
 
 def get_parties(collision_id, parties):
-    party_found = []
-    for party in parties:
-        if party['CollisionId'] == collision_id:
-            party_found.append(party) 
+    party_found = [party for party in parties if party['CollisionId'] == collision_id]
     
     # ensure that the party_found list is in party_number order
     parties_found = []
@@ -46,14 +42,7 @@ def get_parties(collision_id, parties):
         
     return parties_found
     
-def get_injureds(collision_id, injureds):
-    injured_found = []
-    for injured in injureds:
-        if injured['CollisionId'] == collision_id:
-            injured_found.append(injured)
-    return injured_found
-      
-def distill(crash, parties, injureds, nparty_max, analyzed, issues):
+def distill(crash, parties, injureds, nparty_max, logger):
     nparties = len(parties)
     ninjureds = len(injureds)
     
@@ -110,38 +99,39 @@ def distill(crash, parties, injureds, nparty_max, analyzed, issues):
     hit_run = decode_hit_run(crash['HitRun'])
     pcf_party = crash['PrimaryCollisionPartyNumber']
 
-    # add to output dictionary
-    analyzed['CollisionId'].append(collision_id)
-    analyzed['Date-Time'].append(date_time)
-    analyzed['Day of Week'].append(dow)
-    analyzed['Lighting'].append(lighting)
-    analyzed['Weather'].append(weather)
-    analyzed['Road Condition'].append(road_condition)
-    analyzed['Primary Road'].append(primary_road)
-    analyzed['Secondary Road'].append(secondary_road)
-    analyzed['Secondary Dir'].append(secondary_direction)
-    analyzed['Secondary Dist ft'].append(secondary_distance)
-    analyzed['Latitude'].append(latitude)
-    analyzed['Longitude'].append(longitude)
-    analyzed['Collision Type'].append(collision_type)
-    analyzed['Motor Vehicle Involved With'].append(other_vehicle)
-    analyzed['Primary Collision Factor'].append(pcf)
-    analyzed['PCF Violation'].append(pcf_violation)
-    analyzed['PCF Party Num'].append(pcf_party)
-    analyzed['Cited'].append(cited)
-    analyzed['Hit & Run'].append(hit_run)
-    analyzed['Num Parties'].append(str(nparties))
+    # create dictionary for this crash
+    analyzed = {}
+    analyzed['CollisionId'] = collision_id
+    analyzed['Date-Time'] = date_time
+    analyzed['Day of Week'] = dow
+    analyzed['Lighting'] = lighting
+    analyzed['Weather'] = weather
+    analyzed['Road Condition'] = road_condition
+    analyzed['Primary Road'] = primary_road
+    analyzed['Secondary Road'] = secondary_road
+    analyzed['Secondary Dir'] = secondary_direction
+    analyzed['Secondary Dist ft'] = secondary_distance
+    analyzed['Latitude'] = latitude
+    analyzed['Longitude'] = longitude
+    analyzed['Collision Type'] = collision_type
+    analyzed['Motor Vehicle Involved With'] = other_vehicle
+    analyzed['Primary Collision Factor'] = pcf
+    analyzed['PCF Violation'] = pcf_violation
+    analyzed['PCF Party Num'] = pcf_party
+    analyzed['Cited'] = cited
+    analyzed['Hit & Run'] = hit_run
+    analyzed['Num Parties'] = str(nparties)
     
     # fill in injury counts table for this crash
-    analyzed = add_injury_counts(analyzed, injureds, issues)
+    analyzed, logger = add_injury_counts(analyzed, injureds, logger)
     
     # CCRS total injury counts may differ from our count - record any deltas
-    if num_injured != analyzed['Num Injured'][-1]:
-        issues['logfile'].write(f'CID:{collision_id} CCRS num_injured={num_injured} != Calculated num_injured={analyzed['Num Injured'][-1]}\n')
-        issues['nwarnings'] += 1
-    if num_killed != analyzed['Num Killed'][-1]:
-        issues['logfile'].write(f'CID:{collision_id} CCRS num_killed={num_killed} != Calculated num_killed={analyzed['Num Killed'][-1]}\n')
-        issues['nwarnings'] += 1
+    if num_injured != analyzed['Num Injured']:
+        logger['logfile'].write(f'CID:{collision_id} CCRS num_injured={num_injured} != Calculated num_injured={analyzed['Num Injured']}\n')
+        logger['nwarnings'] += 1
+    if num_killed != analyzed['Num Killed']:
+        logger['logfile'].write(f'CID:{collision_id} CCRS num_killed={num_killed} != Calculated num_killed={analyzed['Num Killed']}\n')
+        logger['nwarnings'] += 1
                    
     # add in parties in party_number order
     for party in parties:
@@ -152,8 +142,8 @@ def distill(crash, parties, injureds, nparty_max, analyzed, issues):
     for n in range(nparties, nparty_max):
         analyzed = add_empty_party(analyzed, str(n+1))
                 
-    return analyzed, issues
- 
+    return analyzed, logger
+    
 def add_party(analyzed, party, injured_party):
     # Pull out relevant party data
     p_num = party['PartyNumber']
@@ -193,44 +183,44 @@ def add_party(analyzed, party, injured_party):
 
     prefix = f'P{p_num}'
 
-    analyzed[f'{prefix} Party'].append(p_num)
-    analyzed[f'{prefix} Type'].append(p_type)
-    analyzed[f'{prefix} Age'].append(p_age)
-    analyzed[f'{prefix} Gender'].append(p_sex)
+    analyzed[f'{prefix} Party'] = p_num
+    analyzed[f'{prefix} Type'] = p_type
+    analyzed[f'{prefix} Age'] = p_age
+    analyzed[f'{prefix} Gender'] = p_sex
     
-    analyzed[f'{prefix} Fault'].append(p_fault)
-    analyzed[f'{prefix} Other Assoc Factor'].append(p_oaf)
-    analyzed[f'{prefix} Lane'].append(p_lane)
-    analyzed[f'{prefix} Dir-InAttention'].append(p_dir)
-    analyzed[f'{prefix} Movement'].append(p_movement)
-    analyzed[f'{prefix} SpeedLimit'].append(p_speed_limit)
-    analyzed[f'{prefix} Vehicle'].append(p_vehicle)
+    analyzed[f'{prefix} Fault'] = p_fault
+    analyzed[f'{prefix} Other Assoc Factor'] = p_oaf
+    analyzed[f'{prefix} Lane'] = p_lane
+    analyzed[f'{prefix} Dir-InAttention'] = p_dir
+    analyzed[f'{prefix} Movement'] = p_movement
+    analyzed[f'{prefix} SpeedLimit'] = p_speed_limit
+    analyzed[f'{prefix} Vehicle'] = p_vehicle
 
-    analyzed[f'{prefix} Sobriety'].append(p_sobriety)
+    analyzed[f'{prefix} Sobriety'] = p_sobriety
     
     # add in associated injured persons lists
-    analyzed[f'{prefix} Assoc Injured list'].append(p_injured_list)
-    analyzed[f'{prefix} Assoc Injury Extent list'].append(p_injury_extent_list)
+    analyzed[f'{prefix} Assoc Injured list'] = p_injured_list
+    analyzed[f'{prefix} Assoc Injury Extent list'] = p_injury_extent_list
     
     return analyzed
 
 def add_empty_party(analyzed, p_num):
     prefix = f'P{p_num}'
 
-    analyzed[f'{prefix} Party'].append('')
-    analyzed[f'{prefix} Type'].append('')
-    analyzed[f'{prefix} Age'].append('')
-    analyzed[f'{prefix} Gender'].append('')  
-    analyzed[f'{prefix} Fault'].append('')  
-    analyzed[f'{prefix} Other Assoc Factor'].append('')  
-    analyzed[f'{prefix} Lane'].append('')    
-    analyzed[f'{prefix} Dir-InAttention'].append('')
-    analyzed[f'{prefix} Movement'].append('')
-    analyzed[f'{prefix} SpeedLimit'].append('')
-    analyzed[f'{prefix} Vehicle'].append('')
-    analyzed[f'{prefix} Sobriety'].append('')
-    analyzed[f'{prefix} Assoc Injured list'].append('')
-    analyzed[f'{prefix} Assoc Injury Extent list'].append('')
+    analyzed[f'{prefix} Party'] = ''
+    analyzed[f'{prefix} Type'] = ''
+    analyzed[f'{prefix} Age'] = ''
+    analyzed[f'{prefix} Gender'] = ''
+    analyzed[f'{prefix} Fault'] = ''
+    analyzed[f'{prefix} Other Assoc Factor'] = ''  
+    analyzed[f'{prefix} Lane'] = ''  
+    analyzed[f'{prefix} Dir-InAttention'] = ''
+    analyzed[f'{prefix} Movement'] = ''
+    analyzed[f'{prefix} SpeedLimit'] = ''
+    analyzed[f'{prefix} Vehicle'] = ''
+    analyzed[f'{prefix} Sobriety'] = ''
+    analyzed[f'{prefix} Assoc Injured list'] = ''
+    analyzed[f'{prefix} Assoc Injury Extent list'] = ''
 
     return analyzed
 
@@ -248,15 +238,15 @@ def get_injury_extent(extent_of_injury):
         
     return injury
 
-def add_injury_counts(analyzed, injureds, issues):
+def add_injury_counts(analyzed, injureds, logger):
     
     # If no injuries return 0's
     if not(injureds):
-        analyzed['Num Killed'].append('0')
-        analyzed['Num Injured'].append('0')
+        analyzed['Num Killed'] = '0'
+        analyzed['Num Injured'] = '0'
         for key in INJURY_TABLE_KEYS:
-                analyzed[key].append('0')
-        return analyzed
+                analyzed[key] = '0'
+        return analyzed, logger
         
     injury_table = {key: 0 for key in INJURY_TABLE_KEYS}
     for injured in injureds:
@@ -268,16 +258,16 @@ def add_injury_counts(analyzed, injureds, issues):
                 break
         if person == 'Unknown': 
             # log exception
-            issues['logfile'].write(f'CID:{analyzed['CollisionId'][-1]} Unexpected Injured Person type = {p_type}\n')
-            issues['nwarnings'] += 1
+            logger['logfile'].write(f'CID:{analyzed['CollisionId']} Unexpected Injured Person type = {p_type}\n')
+            logger['nwarnings'] += 1
             continue
         
         inj_type = injured['ExtentOfInjuryCode']
         injury = get_injury_extent(inj_type)
         if injury == 'Unknown':
             # log exception
-            issues['logfile'].write(f'CID:{analyzed['CollisionId'][-1]} Unexpected Extent of Injury = {inj_type}\n')
-            issues['nwarnings'] += 1
+            logger['logfile'].write(f'CID:{analyzed['CollisionId']} Unexpected Extent of Injury = {inj_type}\n')
+            logger['nwarnings'] += 1
             continue
 
         injury_table[f'{person}-{injury}'] += 1
@@ -287,13 +277,13 @@ def add_injury_counts(analyzed, injureds, issues):
     num_killed = fatal_num.sum()
     num_injured = table_num.sum()-num_killed
     
-    analyzed['Num Killed'].append(str(num_killed))
-    analyzed['Num Injured'].append(str(num_injured))
+    analyzed['Num Killed'] = str(num_killed)
+    analyzed['Num Injured'] = str(num_injured)
            
     for key in INJURY_TABLE_KEYS:
-        analyzed[key].append(str(injury_table[key]))
+        analyzed[key] = str(injury_table[key])
         
-    return analyzed
+    return analyzed, logger
     
 def decode_pcf(pcf):
     if pcf == 'A':
@@ -345,39 +335,37 @@ def main():
             n+=1
  
             # read data from CCRS raw data files
-            crashes, crash_keys  = getDataCsv(crashes_file, ',', pivot=True, encoding='cp850')
-            parties, party_keys  = getDataCsv(parties_file, ',', pivot=True, encoding='cp850')
-            injureds, injured_keys = getDataCsv(injured_file, ',', pivot=True, encoding='cp850')
+            crashes, crash_keys  = getListDictCsv(crashes_file, ',', encoding='cp850')
+            parties, party_keys  = getListDictCsv(parties_file, ',', encoding='cp850')
+            injureds, injured_keys = getListDictCsv(injured_file, ',', encoding='cp850')
             
-            # quickly determine max #parties, #injureds for all crash records
+            # quickly determine max #parties for all crash records
             nparty_max  = 0
-            ninjured_max = 0
             for crash in crashes:
-                crash_parties = get_parties(crash['Collision Id'] ,parties)
-                crash_injureds = get_injureds(crash['Collision Id'], injureds)
+                crash_parties = [ party for party in parties if party['CollisionId']==crash['Collision Id'] ]
                 if len(crash_parties) > nparty_max: nparty_max = len(crash_parties)
-                if len(crash_injureds) > ninjured_max: ninjured_max = len(crash_injureds)
+            
+            analyzed = []
+            logfile = f'{logpath}warnings_{search_city}_{year}.log'
+            logger = {'logfile': open_append(logfile), 'nwarnings':0}
             
             # distill data for each crash
-            analyzed = defaultdict(list)
-            logfile = f'{logpath}warnings_{search_city}_{year}.txt'
-            issues = {'logfile': open_append(logfile), 'nwarnings':0}
-            
             for crash in crashes:
-                crash_parties = get_parties(crash['Collision Id'], parties)
-                crash_injureds = get_injureds(crash['Collision Id'], injureds)
-        
-                analyzed, issues = distill(crash, crash_parties, crash_injureds, nparty_max, analyzed, issues)
+                crash_parties = get_parties(crash['Collision Id'], parties)  # in party order
+                crash_injureds = [injured for injured in injureds if injured['CollisionId']==crash['Collision Id']]
+
+                crash_distill, logger = distill(crash, crash_parties, crash_injureds, nparty_max, logger)
+                analyzed.append(crash_distill)
                 
-            # save analyzed dictionary to CSV file
-            dumpDictToCSV(analyzed, out_file, ',',  list(analyzed.keys()))
+            # save analyzed dictionary to CSV file (use keys from the last crash)
+            dumpListDictToCSV(analyzed, out_file, ',',  list(crash_distill.keys()))
             print(f"\nOutput saved in {out_file}")            
             print(f"Time to distill into readable spreadsheet: {time.perf_counter()-begtime:.4f} sec")
             
             # See if any issues occurred
-            issues['logfile'].close()
-            if issues['nwarnings'] > 0:
-                print(f'ISSUES FOUND! see {issues['nwarnings']} messages in {logfile}')
+            logger['logfile'].close()
+            if logger['nwarnings'] > 0:
+                print(f'logger FOUND! see {logger['nwarnings']} messages in {logfile}')
             else:
                 os.remove(logfile)
             

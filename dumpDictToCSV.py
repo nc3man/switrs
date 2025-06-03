@@ -45,16 +45,16 @@ def dumpDictToCSV(dictList, csvFile, delimiter, header, encoding='utf-8'):
 
     fileObj.close
 
-def dumpDictArrayToCSV(dictArray, csvFile, delimiter, header, encoding='utf-8'):
+def dumpListDictToCSV(listDict, csvFile, delimiter, header, encoding='utf-8'):
     """
     Purpose: dumps dictionary array to CSV file
 
-    Usage: dumpDictArrayToCSV(dictList, csvFile, delimiter, header)
+    Usage: dumpListDictToCSV(dictList, csvFile, delimiter, header)
 
     Input:
-        dictArray- Dictionary array, all with the same keys.
+        listDict- Dictionary array, all with the same keys.
         csvFile - Name of CSV file to store the exploded structure, one column per
-                key in DictArray. For input later to Excel if desired.
+                key in listDict. For input later to Excel if desired.
         delimiter - Character used to uniquely separate the cells of the
                 spreadsheet by row. This character must not exist in any
                 of the string values contained in dictList or its keys.
@@ -78,7 +78,7 @@ def dumpDictArrayToCSV(dictArray, csvFile, delimiter, header, encoding='utf-8'):
     fileObj=open(csvFile, 'w', encoding=encoding)
     fileObj.write(delimiter.join(quote_header)+newline)
 
-    for dict in dictArray:
+    for dict in listDict:
         dumpLine=[]
         for col in range(ncols):
             if isinstance(dict[header[col]], str):

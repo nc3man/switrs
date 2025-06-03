@@ -10,20 +10,6 @@ class Handler(QtCore.QObject):
         coords = json.loads(coords_json)
         self.coordinates_received.emit(coords)  # Emit the signal
 
-def select_map_boundary_original():
-    os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'
-    app = QtWidgets.QApplication(sys.argv)
-    view = QtWebEngineWidgets.QWebEngineView()
-
-    channel = QtWebChannel.QWebChannel()
-    handler = Handler()
-    channel.registerObject('pyHandler', handler)
-
-    view.page().setWebChannel(channel)
-    view.load(QtCore.QUrl("http://localhost:8000/map.html"))
-    view.show()
-    sys.exit(app.exec_())
-
 def select_polygon_map():
     os.environ['QTWEBENGINE_DISABLE_SANDBOX'] = '1'
 
