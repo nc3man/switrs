@@ -31,23 +31,18 @@ def putPlaceMark(fobj, crash):
     longitude = crash['Longitude']
     
     # Sift through parties for simple lists: party, injured, injury_extent
+    if cid == '1975389':
+        print(f'cid = {cid}')
     party_list   = ''
     injured_list = ''
     injury_extent_list  = ''
     for n in range(num_parties):
         prefix = f'P{n+1}'
-        if len(party_list)>0:
-            party_list = party_list + crash[f'{prefix} Type'] + ', '
-        else:
-            party_list = crash[f'{prefix} Type'] + ', '
-        if len(injured_list)>0:
+        party_list = party_list + crash[f'{prefix} Type'] + ', '
+        if len(crash[f'{prefix} Assoc Injured list'])>0:
             injured_list = injured_list + crash[f'{prefix} Assoc Injured list'] + ', '
-        else:
-            injured_list = crash[f'{prefix} Assoc Injured list']+ ', '
-        if len(injury_extent_list)>0:
-            injury_extent_list = injury_extent_list + crash[f'{prefix} Assoc Injured list'] + ', '
-        else:
-            injury_extent_list = crash[f'{prefix} Assoc Injury Extent list'] + ', '
+        if len(crash[f'{prefix} Assoc Injury Extent list'])>0:
+            injury_extent_list = injured_list + crash[f'{prefix} Assoc Injury Extent list'] + ', '
     # strip trailing comma and blank
     party_list   = party_list[0:-2]
     injured_list = injured_list[0:-2]

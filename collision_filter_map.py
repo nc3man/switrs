@@ -22,13 +22,13 @@ def select_polygon_map():
     coords_container = {}
 
     def on_coords(coords):
-        # Save CSV file
-        with open('polygon_coords.csv', 'w', newline='') as f:
-            import csv
-            writer = csv.writer(f)
-            writer.writerow(['Latitude', 'Longitude'])
-            for point in coords:
-                writer.writerow([point['lat'], point['lng']])
+        # # Uncomment to save CSV file of polygon coordinates
+        # with open('polygon_coords.csv', 'w', newline='') as f:
+        #     import csv
+        #     writer = csv.writer(f)
+        #     writer.writerow(['Latitude', 'Longitude'])
+        #     for point in coords:
+        #         writer.writerow([point['lat'], point['lng']])
         coords_container['coords'] = coords
         print("Polygon saved. Close this map when ready.")
 

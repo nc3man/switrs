@@ -3,7 +3,7 @@
 # Imports
 import sys
 from getDataCsv import getDataCsv
-from dumpDictToCSV import dumpDictArrayToCSV
+from dumpDictToCSV import dumpListDictToCSV
 from inpoly import inpoly
 import numpy as np
 from createCrashPlacemarks import createCrashPlacemarks
@@ -115,23 +115,23 @@ def main():
     edit_map_html(qcGeo['lat_center'], qcGeo['lon_center'])
     coords = select_polygon_map()
 
-    # determine which crashes are inside the drawn polygon
-    keep_CollisionIds = find_crashes_inside_polygon(geo_crashes, coords)
-
-    # save the location filtered crashes for further analysis
-    crashes_filtered = [crash for crash in crashes if crash['CollisionId'] in keep_CollisionIds]
-    ccrs_filtered = ccrs_csv.replace('.csv', '_filtered.csv')
-    dumpDictArrayToCSV(crashes_filtered, ccrs_filtered, ',', crash_keys)
-    print(f'Crashes within the polygon area are saved in {ccrs_filtered}')
+    # determine which crashes are inside the drawn polygon and save in csv
+    if coords:
+        keep_CollisionIds = find_crashes_inside_polygon(geo_crashes, coords)
+        if len(keep_CollisionIds)>0:
+            crashes_filtered = [crash for crash in crashes if crash['CollisionId'] in keep_CollisionIds]
+            ccrs_filtered = ccrs_csv.replace('.csv', '_filtered.csv')
+            dumpListDictToCSV(crashes_filtered, ccrs_filtered, ',', crash_keys)
+            print(f'Crashes within the polygon area are saved in {ccrs_filtered}')
 
     # Dump out separate CSV files for no geo and poor geo conditions for manual evaluation
     if any(qcGeo['none']):
         ccrs_nogeo_file = ccrs_csv.replace('.csv', '_nogeo.csv')
-        dumpDictArrayToCSV(crash_array[qcGeo['none']], ccrs_nogeo_file, ',', crash_keys)
+        dumpListDictToCSV(crash_array[qcGeo['none']], ccrs_nogeo_file, ',', crash_keys)
         print(f'Crashes without geolocation saved in {ccrs_nogeo_file}')
     if any(qcGeo['poor']):
         ccrs_poorgeo_file = ccrs_csv.replace('.csv', '_poorgeo.csv')
-        dumpDictArrayToCSV(crash_array[qcGeo['poor']], ccrs_poorgeo_file, ',', crash_keys)
+        dumpListDictToCSV(crash_array[qcGeo['poor']], ccrs_poorgeo_file, ',', crash_keys)
         print(f'Crashes geolocation out of bounds saved in {ccrs_poorgeo_file}')
 
 # Main body
