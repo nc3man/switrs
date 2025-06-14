@@ -9,6 +9,7 @@ import numpy as np
 from createCrashPlacemarks import createCrashPlacemarks
 from PyQt5.QtWidgets import QApplication, QFileDialog
 from collision_filter_map import select_polygon_map
+from geopy.distance import geodesic
 
 # Helper functions
 def select_file():
@@ -41,10 +42,10 @@ def scanGeo(crashes):
 
     # first find all non-nil (lat,lon)
     for n in range(ncrashes):
-        if len(lat[n])>0 and len(lon[n])>0:
-            goodGeo[n] = True
+        if lat[n]=="NO MATCH" or lon[n]=="NO MATCH":
+            noGeo[n] = True
 
-    noGeo = np.logical_not(goodGeo)
+    goodGeo = np.logical_not(noGeo)
 
     all_index = np.array(range(ncrashes), dtype=np.int32)
     geo_index = all_index[goodGeo]
@@ -56,9 +57,13 @@ def scanGeo(crashes):
     lat_center = np.median(lat_array)
     lon_center = np.median(lon_array)
 
-    # declare any (lat, lon) "poor" if it differs from the center by > 1 deg (~70 miles)
+    # declare any (lat, lon) "poor" if it differs from the center by > 70 miles
     for n in geo_index:
-        if abs(float(lat[n]) - lat_center)>1.0 or abs(float(lon[n]) - lon_center)>1.0:
+        try:
+            if geodesic([float(lat[n]), float(lon[n])], [lat_center, lon_center]).mi > 70.0:
+                poorGeo[n] = True
+        except:
+            print(f"Really bad latlon = {[float(lat[n]), float(lon[n])]}")
             poorGeo[n] = True
 
     # revise goodGeo by discarding any poor geolocations found
@@ -123,16 +128,14 @@ def main():
             ccrs_filtered = ccrs_csv.replace('.csv', '_filtered.csv')
             dumpListDictToCSV(crashes_filtered, ccrs_filtered, ',', crash_keys)
             print(f'Crashes within the polygon area are saved in {ccrs_filtered}')
-
+    # Original saved files below not needed as the geocoding functions take care of this.
     # Dump out separate CSV files for no geo and poor geo conditions for manual evaluation
-    if any(qcGeo['none']):
-        ccrs_nogeo_file = ccrs_csv.replace('.csv', '_nogeo.csv')
-        dumpListDictToCSV(crash_array[qcGeo['none']], ccrs_nogeo_file, ',', crash_keys)
-        print(f'Crashes without geolocation saved in {ccrs_nogeo_file}')
-    if any(qcGeo['poor']):
-        ccrs_poorgeo_file = ccrs_csv.replace('.csv', '_poorgeo.csv')
-        dumpListDictToCSV(crash_array[qcGeo['poor']], ccrs_poorgeo_file, ',', crash_keys)
-        print(f'Crashes geolocation out of bounds saved in {ccrs_poorgeo_file}')
+    # if any(qcGeo['none']):
+    #     ccrs_nogeo_file = ccrs_csv.replace('.csv', '_nogeo.csv')
+    #     dumpListDictToCSV(crash_array[qcGeo['none']], ccrs_nogeo_file, ',', crash_keys)
+    #     print(f'Crashes without geolocation saved in {ccrs_nogeo_file}')
+    # if any(qcGeo['poor']):
+    #     print(f"Still found {len([qc for qc in qcGeo if qc['poor']==True])}")
 
 # Main body
 if __name__ == '__main__':

@@ -20,6 +20,7 @@ def putPlaceMark(fobj, crash):
     # grab key data for description popup and placemark color style
     cid = crash['CollisionId']
     date_time = crash['Date-Time']
+    city = crash['City']
     c_type = crash['Collision Type']
     pcf    = crash['Primary Collision Factor']
     num_parties = int(crash['Num Parties'])
@@ -27,12 +28,19 @@ def putPlaceMark(fobj, crash):
     num_killed  = crash['Num Killed']
     prim_road   = crash['Primary Road']
     second_road = crash['Secondary Road']
-    latitude = crash['Latitude']
-    longitude = crash['Longitude']
+    dir2nd      = crash['Secondary Dir']
+    if len(crash['Secondary Dist ft'])>0:
+        dist2nd = int(float(crash['Secondary Dist ft']))
+    else:
+        dist2nd = 0
+    latitude = float(crash['Latitude'])
+    longitude = float(crash['Longitude'])
+    try:
+        geosrc = crash['GeoSrc']
+    except:
+        geosrc = ''
     
     # Sift through parties for simple lists: party, injured, injury_extent
-    if cid == '1975389':
-        print(f'cid = {cid}')
     party_list   = ''
     injured_list = ''
     injury_extent_list  = ''
@@ -42,7 +50,7 @@ def putPlaceMark(fobj, crash):
         if len(crash[f'{prefix} Assoc Injured list'])>0:
             injured_list = injured_list + crash[f'{prefix} Assoc Injured list'] + ', '
         if len(crash[f'{prefix} Assoc Injury Extent list'])>0:
-            injury_extent_list = injured_list + crash[f'{prefix} Assoc Injury Extent list'] + ', '
+            injury_extent_list = injury_extent_list + crash[f'{prefix} Assoc Injury Extent list'] + ', '
     # strip trailing comma and blank
     party_list   = party_list[0:-2]
     injured_list = injured_list[0:-2]
@@ -66,24 +74,28 @@ def putPlaceMark(fobj, crash):
     fobj.write(blanks+'<Placemark>\n')
     fobj.write(blanks+'   <name>Collision Id: ' + cid + '</name>\n')				
     fobj.write(blanks+'   <description><![CDATA[\n')				
-    fobj.write(desc_indent + '<div>\n')
-    fobj.write(desc_indent + '  Date-Time: ' + date_time +'<br>\n')
-    fobj.write(desc_indent + '  Collision Type: ' + c_type +'<br>\n')
-    fobj.write(desc_indent + '  Primary Collision Factor: ' + pcf +'<br>\n')
-    fobj.write(desc_indent + '  Primary Rd: ' + prim_road +'<br>\n')
-    fobj.write(desc_indent + '  Secondary Rd: ' + second_road +'<br>\n')
-    fobj.write(desc_indent + '  Parties: ' + party_list +'<br>\n')
-    if style != '#greenPlacemark':
-        fobj.write(desc_indent + '  Injured: ' + injured_list +'<br>\n')
-        fobj.write(desc_indent + '  Injury Extent: ' + injury_extent_list +'<br>\n')
+    fobj.write(f"{desc_indent}<div>\n")
+    fobj.write(f"{desc_indent}  Date-Time: {date_time}<br>\n")
+    fobj.write(f"{desc_indent}  City: {city}<br>\n")
+    fobj.write(f"{desc_indent}  Collision Type: {c_type}<br>\n")
+    fobj.write(f"{desc_indent}  Primary Collision Factor: {pcf}<br>\n")
+    fobj.write(f"{desc_indent}  Primary Rd: {prim_road}<br>\n")
+    if dist2nd != 0:
+        fobj.write(f"{desc_indent}  Secondary Rd: {second_road}   {dist2nd} ft {dir2nd}<br>\n")
     else:
-        fobj.write(desc_indent + '  Property damage only<br>\n')
-    fobj.write(desc_indent + '  [Lat,Lon]=[' + latitude +',' + longitude +']<br>\n')
-    fobj.write(desc_indent + '</div>\n')
+        fobj.write(f"{desc_indent}  Secondary Rd: {second_road}<br>\n")
+    fobj.write(f"{desc_indent}  Parties: {party_list}<br>\n")
+    if style != '#greenPlacemark':
+        fobj.write(f"{desc_indent}  Injured: {injured_list}<br>\n")
+        fobj.write(f"{desc_indent}  Injury Extent: {injury_extent_list}<br>\n")
+    else:
+        fobj.write(f"{desc_indent}  Property damage only<br>\n")
+    fobj.write(f"{desc_indent}  [Lat,Lon]=[{latitude:.4f}, {longitude:.4f}] {geosrc}<br>\n")
+    fobj.write(f"{desc_indent}</div>\n")
     fobj.write(blanks+'   ]]></description>\n')				
     fobj.write(blanks+'   <styleUrl>' + style + '</styleUrl>\n')
     fobj.write(blanks+'   <Point>\n')           
-    fobj.write(blanks+'      <coordinates>' + longitude + ',' + latitude + ',0</coordinates>\n')
+    fobj.write(blanks+'      <coordinates>' + str(longitude) + ',' + str(latitude) + ',0</coordinates>\n')
     fobj.write(blanks+'   </Point>\n')           
     fobj.write(blanks+'</Placemark>\n')
 

@@ -3,15 +3,23 @@
 # Imports
 from dumpDictToCSV import dumpListDictToCSV
 from getDataCsv import getListDictCsv
+from geocodePelias import geocode_pelias
+from geocodeGoogle import geocode_google
 import numpy as np
+from geopy.distance import geodesic
 import time
 import os
 
 # User variables
-years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
-inpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
-outpath = 'C:/Users/karl/python/switrs/CCRS/'
+# #years = [2023]
+geoCode = True
+search_cities = ['Encinitas']
+years = ['2017','2018','2019','2020','2021','2022','2023','2024','2025',]
+# years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
+# search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
+
+inpath = './CCRS_raw/'
+outpath = './CCRS_geo/'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -48,6 +56,7 @@ def distill(crash, parties, injureds, nparty_max, logger):
     
     collision_id = crash['Collision Id']
     date_time = crash['Crash Date Time']
+    city = crash['City Name']
     dow = crash['Day Of Week']
     lighting = crash['LightingDescription']
     try:
@@ -72,7 +81,11 @@ def distill(crash, parties, injureds, nparty_max, logger):
         secondary_distance = str(float(secondary_distance) * M2FT) 
     latitude = crash['Latitude']
     longitude = crash['Longitude']
-        
+    if latitude and longitude:
+        geosrc = "CCRS"
+    else:
+        geosrc = ""
+                      
     # collision stuff
     collision_type = crash['Collision Type Description']
     if len(crash['Collision Type Other Desc']) > 0:
@@ -103,6 +116,7 @@ def distill(crash, parties, injureds, nparty_max, logger):
     analyzed = {}
     analyzed['CollisionId'] = collision_id
     analyzed['Date-Time'] = date_time
+    analyzed['City'] = city
     analyzed['Day of Week'] = dow
     analyzed['Lighting'] = lighting
     analyzed['Weather'] = weather
@@ -113,6 +127,11 @@ def distill(crash, parties, injureds, nparty_max, logger):
     analyzed['Secondary Dist ft'] = secondary_distance
     analyzed['Latitude'] = latitude
     analyzed['Longitude'] = longitude
+    analyzed['GeoSrc'] = geosrc
+    analyzed['GeoMatchType'] = ""
+    analyzed['GeoConf'] = ""
+    analyzed['GeoAccuracy'] = ""
+    analyzed['GeoBbox'] = ""
     analyzed['Collision Type'] = collision_type
     analyzed['Motor Vehicle Involved With'] = other_vehicle
     analyzed['Primary Collision Factor'] = pcf
@@ -303,6 +322,52 @@ def decode_hit_run(hit_run):
         desc = ' '
     return desc
     
+def add_geo(crashes):
+    # pull out lat, lon if recorded by CCRS (geolocations from Pelias & Google not wild)
+    crash_geos = [crash for crash in crashes if crash['GeoSrc']=='CCRS']
+    crash_empty = [crash for crash in crashes if crash['GeoSrc']==""]
+        
+        
+    # Geolocation check: If lat,lon empty, go to Pelias > if poor match, go to Google
+    for crash in crash_empty:
+        geocode_pelias(crash)
+        if crash['Latitude']=="NO MATCH" or float(crash['GeoConf'])<0.95:
+            geocode_google(crash)
+        
+    lats = [crash['Latitude'] for crash in crash_geos]
+    lons = [crash['Longitude'] for crash in crash_geos]
+
+    lat_array = np.array([float(lat) for lat in lats], dtype=float)
+    lon_array = np.array([float(lon) for lon in lons], dtype=float)
+
+    # find median of all the goodGeo (lat,lon)s, avoiding wild errors
+    center = [np.median(lat_array), np.median(lon_array)]
+    
+    # save collision IDs for any lat,lon more than 70 miles from the center
+    poor_geo_crashes = []
+    for crash in crash_geos:
+        latlon = [float(crash['Latitude']), float(crash['Longitude'])]
+        try:
+            if geodesic(latlon, center).mi > 70.0:
+                poor_geo_crashes.append(crash)
+        except:
+            print(f"Really bad latlon = {latlon}")
+            poor_geo_crashes.append(crash)       
+
+    nogeo = []
+    for crash in poor_geo_crashes:
+        # first try Pelias, if looks poor use Google
+        geocode_pelias(crash)
+        crash['GeoSrc'] = 'Pelias < CCRS'
+        if crash['Latitude']=="NO MATCH" or float(crash['GeoConf'])<0.8:
+            geocode_google(crash)
+            crash['GeoSrc'] = 'Google < Pelias < CCRS'
+            
+        if crash['Latitude']=="NO MATCH":
+            nogeo.append(crash['CollisionId'])
+        
+    return nogeo
+   
 def open_append(filename):
     # First check to see if it exists - will delete to open new file
     if os.path.exists(filename):
@@ -320,11 +385,14 @@ def main():
  
     for search_city in search_cities:
         for year in years:
+            
+            print(f"Distilling {search_city} {year}")
  
             crashes_file = inpath + f'CCRS_crashes_{search_city}_{year}.csv'
             parties_file = inpath + f'CCRS_parties_{search_city}_{year}.csv'
             injured_file = inpath + f'CCRS_injured_{search_city}_{year}.csv'
             out_file = outpath + f'CCRS_{search_city}_{year}.csv'
+            nogeo_file = out_file.replace('.csv', '_nogeo.csv')
             begtime = time.perf_counter()
             n+=1
  
@@ -351,10 +419,21 @@ def main():
                 crash_distill = distill(crash, crash_parties, crash_injureds, nparty_max, logger)
                 analyzed.append(crash_distill)
                 
+            # add geocoding for empy (lat,lon) and repair out-of-bounds (lat,lon)
+            if geoCode:
+                geotime = time.perf_counter()
+                nogeo = add_geo(analyzed)
+                print(f"Time to add geocoding = {time.perf_counter()-geotime}")
+                
             # save analyzed dictionary to CSV file (use keys from the last crash)
-            dumpListDictToCSV(analyzed, out_file, ',',  list(crash_distill.keys()))
-            print(f"\nOutput saved in {out_file}")            
-            print(f"Time to distill into readable spreadsheet: {time.perf_counter()-begtime:.4f} sec")
+            crash_keys = list(crash_distill.keys())
+            dumpListDictToCSV(analyzed, out_file, ',', crash_keys)
+            print(f"\nOutput saved in {out_file}")
+            if len(nogeo) > 0:
+                dumpListDictToCSV([crash for crash in analyzed if crash['CollisionId'] in nogeo],\
+                    nogeo_file, ',',  crash_keys)
+                print(f"Collisions with no geo saved in {nogeo_file}")
+            print(f"Time to distill and QC geolocation: {time.perf_counter()-begtime:.4f} sec")
             
             # See if any issues occurred
             logger['logfile'].close()
