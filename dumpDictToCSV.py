@@ -1,4 +1,4 @@
-from collections import defaultdict
+import csv
 
 def dumpDictToCSV(dictList, csvFile, delimiter, header, encoding='utf-8'):
     """
@@ -45,15 +45,15 @@ def dumpDictToCSV(dictList, csvFile, delimiter, header, encoding='utf-8'):
 
     fileObj.close
 
-def dumpListDictToCSV(listDict, csvFile, delimiter, header, encoding='utf-8'):
+def dumpListDictToCSV(listDict, csvName, delimiter, header, encoding='utf-8'):
     """
     Purpose: dumps dictionary array to CSV file
 
-    Usage: dumpListDictToCSV(dictList, csvFile, delimiter, header)
+    Usage: dumpListDictToCSV(dictList, csvName, delimiter, header)
 
     Input:
         listDict- Dictionary array, all with the same keys.
-        csvFile - Name of CSV file to store the exploded structure, one column per
+        csvName - Name of CSV file to store the exploded structure, one column per
                 key in listDict. For input later to Excel if desired.
         delimiter - Character used to uniquely separate the cells of the
                 spreadsheet by row. This character must not exist in any
@@ -67,24 +67,9 @@ def dumpListDictToCSV(listDict, csvFile, delimiter, header, encoding='utf-8'):
         row is a header line of dictionary keys for the columns.
     """
 
-    ncols = len(header)
-    newline = '\n'
+    with open(csvName, "w", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=header)
+        writer.writeheader()
+        for dict in listDict:
+            writer.writerow(dict)
 
-    # ensure header is enclosed in double quotes
-    quote_header = []
-    for n in range(ncols):
-        quote_header.append(f'"{header[n]}"')
-
-    fileObj=open(csvFile, 'w', encoding=encoding)
-    fileObj.write(delimiter.join(quote_header)+newline)
-
-    for dict in listDict:
-        dumpLine=[]
-        for col in range(ncols):
-            if isinstance(dict[header[col]], str):
-                dumpLine.append('"'+dict[header[col]]+'"')
-            else:
-                dumpLine.append(str(dict[header[col]]))
-        fileObj.write(delimiter.join(dumpLine)+newline)
-
-    fileObj.close

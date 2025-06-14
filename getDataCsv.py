@@ -92,31 +92,15 @@ def getListDictCsv( csvFile, delimiter, encoding='utf-8'):
                 in the members dictionary will match the header list, but in possibly
                 different order.
     """
-
-    data = defaultdict(list)
-    
-    ## open the file and attach the CSV reader object
-    
-    with open(csvFile, encoding=encoding) as csvf:
-        reader = csv.reader(csvf, delimiter=delimiter, quotechar='"')
-        listDict = []
+    listDict = []
+            
+    # use efficient DictReader method
+    with open(csvFile, newline='') as csvfile:
+        reader = csv.DictReader(csvfile)
         for row in reader:
-            if reader.line_num==1:                     
-                ## pull the header strings from the first line
-                header = row
-                ncols = len(header)
-                
-                while len(header[-1])==0:  # check to see if last field is nil
-                    ncols = ncols-1
-                    del(header[ncols])
-                    
-                # remove leading and trailing whitespace that could clutter header
-                header = [h.strip() for h in header]
-                index = range(ncols)
+            listDict.append(row)
+            
+    header = list(listDict[0].keys())
 
-            else:
-                # use zip to create a dictionary with keys=header, values=row
-                listDict.append({header[i]:row[i] for i in index})
- 
     return(listDict, header)
  
