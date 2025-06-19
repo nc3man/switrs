@@ -69,6 +69,13 @@ def pivot_data(data,header):
             
         return(data_pivot)
         
+def rename_keys(data, old_keys, new_keys):
+    key_map = dict(zip(old_keys, new_keys))
+    return [
+        {key_map[k]: v for k, v in d.items()} for d in data
+    ]
+
+        
 def getListDictCsv( csvFile, delimiter, encoding='utf-8'):
     """
     Usage: data, header = getDataCsv( csvFile, delimiter)
@@ -101,6 +108,12 @@ def getListDictCsv( csvFile, delimiter, encoding='utf-8'):
             listDict.append(row)
             
     header = list(listDict[0].keys())
+    
+    # there should be no leading / trailing whitespace (blanks and tabs) in header
+    header_strip = [h.strip() for h in header]
+    if header_strip != header:
+        listDict = rename_keys(listDict, header, header_strip)
+        header = header_strip
 
     return(listDict, header)
  
