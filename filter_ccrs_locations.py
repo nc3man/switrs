@@ -42,7 +42,7 @@ def scanGeo(crashes):
 
     # first find all non-nil (lat,lon)
     for n in range(ncrashes):
-        if lat[n]=="NO MATCH" or lon[n]=="NO MATCH":
+        if lat[n]=="NO MATCH" or lon[n]=="NO MATCH" or lat[n]=="" or lon[n]=="":
             noGeo[n] = True
 
     goodGeo = np.logical_not(noGeo)
@@ -130,12 +130,16 @@ def main():
             print(f'Crashes within the polygon area are saved in {ccrs_filtered}')
     # Original saved files below not needed as the geocoding functions take care of this.
     # Dump out separate CSV files for no geo and poor geo conditions for manual evaluation
-    # if any(qcGeo['none']):
-    #     ccrs_nogeo_file = ccrs_csv.replace('.csv', '_nogeo.csv')
-    #     dumpListDictToCSV(crash_array[qcGeo['none']], ccrs_nogeo_file, ',', crash_keys)
-    #     print(f'Crashes without geolocation saved in {ccrs_nogeo_file}')
-    # if any(qcGeo['poor']):
-    #     print(f"Still found {len([qc for qc in qcGeo if qc['poor']==True])}")
+    if any(qcGeo['none']):
+        ccrs_nogeo_file = ccrs_csv.replace('.csv', '_nogeo.csv')
+        dumpListDictToCSV(crash_array[qcGeo['none']], ccrs_nogeo_file, ',', crash_keys)
+        print(f'Crashes without geolocation saved in {ccrs_nogeo_file}')
+    if any(qcGeo['poor']):
+        # print(f"Still found {len([qc for qc in qcGeo if qc['poor']==True])}")
+        ccrs_poorgeo_file = ccrs_csv.replace('.csv', '_poorgeo.csv')
+        dumpListDictToCSV(crash_array[qcGeo['poor']], ccrs_poorgeo_file, ',', crash_keys)
+        print(f'Crashes with poor geolocation saved in {ccrs_poorgeo_file}')
+
 
 # Main body
 if __name__ == '__main__':

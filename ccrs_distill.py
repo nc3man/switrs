@@ -3,23 +3,21 @@
 # Imports
 from dumpDictToCSV import dumpListDictToCSV
 from getDataCsv import getListDictCsv
-from geocodePelias import geocode_pelias
-from geocodeGoogle import geocode_google
+from update_geo import add_geo
+from CVC_dictionary import lookup_cvc
 import numpy as np
-from geopy.distance import geodesic
 import time
 import os
 
 # User variables
-# #years = [2023]
-geoCode = True
-search_cities = ['Encinitas']
-years = ['2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-# years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-# search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
-
-inpath = './CCRS_raw/'
-outpath = './CCRS_geo/'
+years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
+search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside', 'San Diego']
+# years = ['2025']
+# search_cities = ['Solana Beach']
+# inpath = './CCRS_raw_update_csv/'
+# outpath = './CCRS_new_format/'
+inpath = './CCRS_get_raw_api/'
+outpath = './CCRS_from_raw_api/'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -27,6 +25,9 @@ outpath = './CCRS_geo/'
 M2FT = 3.280839895 # convert meters to feet
 INJURY_PERSON_TYPE = ['Driver', 'Bicyclist', 'Pedestrian', 'Passenger', 'Other']               
 INJURY_TYPE =['Fatal','SuspectSerious','SuspectMinor','PossibleInjury']
+geoCode = True  # adds a TON of time (and $$$) if true and and geoTest = False
+geoTest = True  # prints out number of crashes to geocode w/o calling Google API to assest cost
+# note NEVER run geoTest = False here because copy_geo_data.py needs to go first to avoid redundant $$$ geo updates
 
 INJURY_TABLE_KEYS = []
 for person in INJURY_PERSON_TYPE:
@@ -51,11 +52,15 @@ def get_parties(collision_id, parties):
     return parties_found
     
 def distill(crash, parties, injureds, nparty_max, logger):
+    import CVC_dictionary
+    
     nparties = len(parties)
     ninjureds = len(injureds)
     
     collision_id = crash['Collision Id']
     date_time = crash['Crash Date Time']
+    creation_date = crash['CreatedDate']
+    modification_date = crash['ModifiedDate']
     city = crash['City Name']
     dow = crash['Day Of Week']
     lighting = crash['LightingDescription']
@@ -65,12 +70,17 @@ def distill(crash, parties, injureds, nparty_max, logger):
             weather = weather + ' + ' + crash['Weather 2']
     except:
         weather = 'n/a' # before 2016
+    
+    roadway_surface = decode_roadway_surface(crash['RoadwaySurfaceCode']) 
+    
     try:
         road_condition = crash['Road Condition 1']
         if len(crash['Road Condition 2']) > 0:
             road_condition = road_condition + ' + ' +  crash['Road Condition 2'] 
     except:
         road_condition = 'n/a' # before 2016
+        
+    traffic_control_devices = decode_traffic_control_device(crash['TrafficControlDeviceCode'])
 
     # location
     primary_road = crash['PrimaryRoad']
@@ -87,6 +97,8 @@ def distill(crash, parties, injureds, nparty_max, logger):
         geosrc = ""
                       
     # collision stuff
+    is_tow_away = crash['IsTowAway']
+    pedestrian_action = crash['PedestrianActionDesc']
     collision_type = crash['Collision Type Description']
     if len(crash['Collision Type Other Desc']) > 0:
         collision_type = collision_type + ' / ' + crash['Collision Type Other Desc']
@@ -108,6 +120,11 @@ def distill(crash, parties, injureds, nparty_max, logger):
         pcf_violation = crash['Primary Collision Factor Violation']
     except:
         pcf_violation = crash['PrimaryCollisionFactorDescription'] # before 2016
+    # pcf_description = decode_violation(pcf_violation)
+    pcf_description = lookup_cvc(pcf_violation)
+    if len(pcf_description)==0:
+        pcf_description = pcf_violation
+
     cited = crash['PrimaryCollisionFactorIsCited']
     hit_run = decode_hit_run(crash['HitRun'])
     pcf_party = crash['PrimaryCollisionPartyNumber']
@@ -115,12 +132,16 @@ def distill(crash, parties, injureds, nparty_max, logger):
     # create dictionary for this crash
     analyzed = {}
     analyzed['CollisionId'] = collision_id
-    analyzed['Date-Time'] = date_time
+    analyzed['Crash Date-Time'] = date_time
+    analyzed['CreatedDate'] = creation_date
+    analyzed['ModifiedDate'] = modification_date
     analyzed['City'] = city
     analyzed['Day of Week'] = dow
     analyzed['Lighting'] = lighting
     analyzed['Weather'] = weather
+    analyzed['Roadway Surface Desc'] = roadway_surface
     analyzed['Road Condition'] = road_condition
+    analyzed['Traffic Control Device Desc'] = traffic_control_devices 
     analyzed['Primary Road'] = primary_road
     analyzed['Secondary Road'] = secondary_road
     analyzed['Secondary Dir'] = secondary_direction
@@ -136,9 +157,12 @@ def distill(crash, parties, injureds, nparty_max, logger):
     analyzed['Motor Vehicle Involved With'] = other_vehicle
     analyzed['Primary Collision Factor'] = pcf
     analyzed['PCF Violation'] = pcf_violation
+    analyzed['PCF Violation Description'] = pcf_description
     analyzed['PCF Party Num'] = pcf_party
     analyzed['Cited'] = cited
     analyzed['Hit & Run'] = hit_run
+    analyzed['IsTowAway'] = is_tow_away
+    analyzed['Pedestrian Action'] = pedestrian_action
     analyzed['Num Parties'] = str(nparties)
     
     # fill in injury counts table for this crash
@@ -179,7 +203,10 @@ def add_party(analyzed, party, injured_party):
         p_dir = party['DirectionOfTravel'] # before 2016
     p_lane = party['Lane']
     p_movement = party['MovementPrecCollDescription']
-    p_vehicle = party['V1Year'] + '/' + party['V1Make'] + '/' + party['V1Model'] + '/' + party['V1Color']
+    try:
+        p_vehicle = party['V1Year'] + '/' + party['V1Make'] + '/' + party['V1Model'] + '/' + party['V1Color']
+    except:    
+        p_vehicle = party['Vehicle1Year'] + '/' + party['Vehicle1Make'] + '/' + party['Vehicle1Model'] + '/' + party['Vehicle1Color']
     p_speed_limit = party['SpeedLimit']
     p_fault = party['IsAtFault']
     p_sobriety = party['SobrietyDrugPhysicalDescription1']
@@ -312,7 +339,7 @@ def decode_pcf(pcf):
     else:
         desc = 'Not Stated'
     return desc
-    
+
 def decode_hit_run(hit_run):
     if hit_run == 'F':
         desc = 'Felony'
@@ -322,52 +349,38 @@ def decode_hit_run(hit_run):
         desc = ' '
     return desc
     
-def add_geo(crashes):
-    # pull out lat, lon if recorded by CCRS (geolocations from Pelias & Google not wild)
-    crash_geos = [crash for crash in crashes if crash['GeoSrc']=='CCRS']
-    crash_empty = [crash for crash in crashes if crash['GeoSrc']==""]
+def decode_roadway_surface(code):
+    if code=='A':
+        desc = 'Dry'
+    elif code=='B':
+        desc = 'Wet'
+    elif code=='C':
+        desc = 'Snowy-Icy'
+    elif code=='D':
+        desc = 'Slippery(Muddy,Oily,etc)'
+    elif len(code) > 0:
+        desc = f"UNKNOWN CODE={code}"
+    else:
+        desc = ''
         
-        
-    # Geolocation check: If lat,lon empty, go to Pelias > if poor match, go to Google
-    for crash in crash_empty:
-        geocode_pelias(crash)
-        if crash['Latitude']=="NO MATCH" or float(crash['GeoConf'])<0.95:
-            geocode_google(crash)
-        
-    lats = [crash['Latitude'] for crash in crash_geos]
-    lons = [crash['Longitude'] for crash in crash_geos]
+    return desc
 
-    lat_array = np.array([float(lat) for lat in lats], dtype=float)
-    lon_array = np.array([float(lon) for lon in lons], dtype=float)
-
-    # find median of all the goodGeo (lat,lon)s, avoiding wild errors
-    center = [np.median(lat_array), np.median(lon_array)]
-    
-    # save collision IDs for any lat,lon more than 70 miles from the center
-    poor_geo_crashes = []
-    for crash in crash_geos:
-        latlon = [float(crash['Latitude']), float(crash['Longitude'])]
-        try:
-            if geodesic(latlon, center).mi > 70.0:
-                poor_geo_crashes.append(crash)
-        except:
-            print(f"Really bad latlon = {latlon}")
-            poor_geo_crashes.append(crash)       
-
-    nogeo = []
-    for crash in poor_geo_crashes:
-        # first try Pelias, if looks poor use Google
-        geocode_pelias(crash)
-        crash['GeoSrc'] = 'Pelias < CCRS'
-        if crash['Latitude']=="NO MATCH" or float(crash['GeoConf'])<0.8:
-            geocode_google(crash)
-            crash['GeoSrc'] = 'Google < Pelias < CCRS'
-            
-        if crash['Latitude']=="NO MATCH":
-            nogeo.append(crash['CollisionId'])
+def decode_traffic_control_device(code):
+    if code=='A':
+        desc = 'Controls Functioning'
+    elif code=='B':
+        desc = 'Controls NOT Functioning'
+    elif code=='C':
+        desc = 'Controls Obscured'
+    elif code=='D':
+        desc = 'NO Controls Present/Factor'
+    elif len(code) > 0:
+        desc = f"UNKNOWN CODE={code}"
+    else:
+        desc = ''
         
-    return nogeo
-   
+    return desc
+
 def open_append(filename):
     # First check to see if it exists - will delete to open new file
     if os.path.exists(filename):
@@ -375,13 +388,14 @@ def open_append(filename):
     # Create new file and open in append mode
     file_obj = open(filename, 'a')
     return file_obj
-    
+
 # End helper functions ---------------------------------------------------------
 
 def main():
     
     begtime_all = time.perf_counter()
     n = 0
+    ngeo_updated = 0
  
     for search_city in search_cities:
         for year in years:
@@ -400,6 +414,10 @@ def main():
             crashes, crash_keys  = getListDictCsv(crashes_file, ',', encoding='cp850')
             parties, party_keys  = getListDictCsv(parties_file, ',', encoding='cp850')
             injureds, injured_keys = getListDictCsv(injured_file, ',', encoding='cp850')
+            
+            # the API sometimes returns duplicate parties - dedupe
+            unique_parties = list({tuple(sorted(d.items())): d for d in parties}.values())
+            parties = unique_parties
             
             # quickly determine max #parties for all crash records
             nparty_max  = 0
@@ -422,18 +440,22 @@ def main():
             # add geocoding for empy (lat,lon) and repair out-of-bounds (lat,lon)
             if geoCode:
                 geotime = time.perf_counter()
-                nogeo = add_geo(analyzed)
+                nogeo, nupdated = add_geo(analyzed, geoTest)
                 print(f"Time to add geocoding = {time.perf_counter()-geotime}")
+                ngeo_updated += nupdated
+                if len(nogeo) > 0:
+                    dumpListDictToCSV([crash for crash in analyzed if crash['CollisionId'] in nogeo],\
+                        nogeo_file, ',',  crash_keys)
+                    print(f"Collisions with no geo saved in {nogeo_file}")
                 
-            # save analyzed dictionary to CSV file (use keys from the last crash)
-            crash_keys = list(crash_distill.keys())
+            # save analyzed dictionary to CSV file (use keys from the first crash)
+            crash_keys = list(analyzed[0].keys())
             dumpListDictToCSV(analyzed, out_file, ',', crash_keys)
             print(f"\nOutput saved in {out_file}")
-            if len(nogeo) > 0:
-                dumpListDictToCSV([crash for crash in analyzed if crash['CollisionId'] in nogeo],\
-                    nogeo_file, ',',  crash_keys)
-                print(f"Collisions with no geo saved in {nogeo_file}")
-            print(f"Time to distill and QC geolocation: {time.perf_counter()-begtime:.4f} sec")
+            if geoCode:
+                print(f"Time to distill and QC geolocation: {time.perf_counter()-begtime:.4f} sec")
+            else:
+                print(f"Time to distill: {time.perf_counter()-begtime:.4f} sec")
             
             # See if any issues occurred
             logger['logfile'].close()
@@ -443,6 +465,7 @@ def main():
                 os.remove(logfile)
             
     print(f"\nTotal time to distill CCRS records for {len(years)} years and {len(search_cities)} cities: {time.perf_counter()-begtime_all:.4f} sec")
+    print(f" Total number of geolocations to repair/add = {ngeo_updated}")
 
    
 # Main body

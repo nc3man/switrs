@@ -7,10 +7,13 @@ from getDataCsv import getListDictCsv
 import time
 
 # User variables
-years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
+# years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
+# search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
+years = ['2015']
+search_cities = ['San Diego']
+
 inpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
-outpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
+outpath = 'C:/Users/karl/python/switrs/CCRS_raw_update_csv/'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -24,6 +27,8 @@ def run_filters(city_search,year, crashes_all, parties_all, injureds_all, crash_
 
         # filter crashes based on City Name
         crashes = [crash for crash in crashes_all if crash["City Name"]==city]
+        # remove crashes not in API search: NCIC=3700 ???
+        # crashes = [crash for crash in crashes if crash["NCIC Code"]!="3700"]
         collision_ids = [crash["Collision Id"] for crash in crashes]
         print(f"\nTime to filter {city} crashes: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
@@ -43,15 +48,15 @@ def run_filters(city_search,year, crashes_all, parties_all, injureds_all, crash_
         out_file_suffix = f'{city}_{year}.csv'
 
         crash_out = outpath + 'CCRS_crashes_' + out_file_suffix
-        dumpListDictToCSV(crashes, crash_out, ',',  crash_keys, encoding='cp850')
+        dumpListDictToCSV(crashes, crash_out, ',',  crash_keys)  # , encoding='cp850'
         print(f"\n{len(crashes)} Filtered Crashes saved in {crash_out}")
 
         party_out = outpath + 'CCRS_parties_' + out_file_suffix
-        dumpListDictToCSV(parties, party_out, ',',  party_keys, encoding='cp850')
+        dumpListDictToCSV(parties, party_out, ',',  party_keys) # , encoding='cp850'
         print(f"{len(parties)} Filtered parties saved in {party_out}")
 
         injured_out = outpath + 'CCRS_injured_' + out_file_suffix
-        dumpListDictToCSV(injureds, injured_out, ',',  injured_keys, encoding='cp850')
+        dumpListDictToCSV(injureds, injured_out, ',',  injured_keys) # , encoding='cp850'
         print(f"{len(injureds)} Filtered injureds saved in {injured_out}")
 
         print(f"Time to save filtered data: {time.perf_counter()-begtime:.4f} sec")
@@ -70,15 +75,15 @@ def main():
 
         # read data from CCRS raw data files
         begtime = time.perf_counter()
-        crashes, crash_keys  = getListDictCsv(crashes_file, ',', encoding = 'cp850')
+        crashes, crash_keys  = getListDictCsv(crashes_file, ',') # , encoding = 'cp850'
         print(f"\nTime to load all crashes: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
 
-        parties, party_keys  = getListDictCsv(parties_file, ',', encoding = 'cp850')
+        parties, party_keys  = getListDictCsv(parties_file, ',') # , encoding = 'cp850'
         print(f"Time to load all parties: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
 
-        injureds, injured_keys = getListDictCsv(injureds_file, ',', encoding = 'cp850')
+        injureds, injured_keys = getListDictCsv(injureds_file, ',') # , encoding = 'cp850'
         print(f"Time to load all injuries: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()
 

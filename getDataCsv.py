@@ -1,7 +1,9 @@
 import csv
 from collections import defaultdict
+from charset_normalizer import from_path
 
-def getDataCsv( csvFile, delimiter, pivot=False, encoding='utf-8'):
+
+def getDataCsv( csvFile, delimiter, pivot=False, encoding='best_guess'):
     """
     Usage: data, header = getDataCsv( csvFile, delimiter, pivot=False )
     
@@ -29,6 +31,12 @@ def getDataCsv( csvFile, delimiter, pivot=False, encoding='utf-8'):
     """
 
     data = defaultdict(list)
+    
+    # in case an unexpected charset was used for the text file
+    if encoding=='best_guess':
+        results = from_path(csvFile)
+        best_guess = results.best()
+        encoding = best_guess.encoding
     
     ## open the file and attach the CSV reader object
     
@@ -71,14 +79,16 @@ def pivot_data(data,header):
         
 def rename_keys(data, old_keys, new_keys):
     key_map = dict(zip(old_keys, new_keys))
+    
     return [
-        {key_map[k]: v for k, v in d.items()} for d in data
+        {key_map[k]: v for k, v in d.items() if k!=None} for d in data
     ]
 
         
-def getListDictCsv( csvFile, delimiter, encoding='utf-8'):
+def getListDictCsv( csvFile, delimiter, encoding='best_guess'):
     """
     Usage: data, header = getDataCsv( csvFile, delimiter)
+           This function is a more efficient version of getDataCSV with pivot=True
     
     Purpose: reads a CSV file from Excel of SDCBC membership and contribution data
                                     
@@ -89,20 +99,22 @@ def getListDictCsv( csvFile, delimiter, encoding='utf-8'):
       delimiter - Character used to uniquely separate the cells of the
                   spreadsheet by row.
       encoding - Optional if the csv reader encounters weird characters. default utf-8
-                 Can use the chardet python package to query for correct encoding.
+                 Can use the charset python package to query for correct encoding.
 
     Output:
       data - List (dictionaries of csv data). Output is one dictionary per row 
-             in the CSV file beyond row 1. Keys are the header in top row.
-             If pivot = True, an array of dictionaries for each row, keys = header
-      header  - Save header values in same order as input on CSV file. The keys
-                in the members dictionary will match the header list, but in possibly
-                different order.
+      header  - Keys for each row in the dictionary. Each row has the same keys
     """
     listDict = []
-            
+    
+    # in case an unexpected charset was used for the text file
+    if encoding=='best_guess':
+        results = from_path(csvFile)
+        best_guess = results.best()
+        encoding = best_guess.encoding
+
     # use efficient DictReader method
-    with open(csvFile, newline='') as csvfile:
+    with open(csvFile, newline='', encoding=encoding) as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             listDict.append(row)

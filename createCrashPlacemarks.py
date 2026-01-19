@@ -19,7 +19,7 @@ def putPlaceMark(fobj, crash):
 
     # grab key data for description popup and placemark color style
     cid = crash['CollisionId']
-    date_time = crash['Date-Time']
+    date_time = crash['Crash Date-Time']
     city = crash['City']
     c_type = crash['Collision Type']
     pcf    = crash['Primary Collision Factor']

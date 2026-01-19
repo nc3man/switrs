@@ -7,7 +7,7 @@ SDBOUNDS = "32.34,-117.29|33.56,-116.00"
 BEARING = {"N":0, "E":90, "S":180, "W":270}
 M2FT = 3.280839895 # convert meters to feet
 FT2M = 1.0/M2FT
-API_READ_TIMEOUT=20
+API_READ_TIMEOUT=200
 
 def google_geocode(query, api_key, bounds=None):
     url = "https://maps.googleapis.com/maps/api/geocode/json"
@@ -24,6 +24,11 @@ def google_geocode(query, api_key, bounds=None):
     except: # try again
         response = requests.get(url, params=params, timeout=API_READ_TIMEOUT)
         data = response.json()
+
+    if data["status"] == "REQUEST_DENIED":
+        print(f"status: {data["status"]}")
+        print(f"error message: {data["error_message"]}")
+        exit()
 
     if data["status"] == "OK":
         loc = data["results"][0]["geometry"]["location"]
@@ -67,7 +72,7 @@ def geocode_google(crash):
     latlon = google_geocode(query, API_KEY, bounds=SDBOUNDS)
     if latlon:
         # move along intersection point
-        if dist_ft > 0.0:
+        if dist_ft != 0.0:
             try:
                 latlon = move_along_bearing(latlon, dist_ft*FT2M, BEARING[direction])
                 crash['Latitude'] = str(latlon[0])

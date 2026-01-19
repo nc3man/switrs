@@ -45,7 +45,7 @@ def dumpDictToCSV(dictList, csvFile, delimiter, header, encoding='utf-8'):
 
     fileObj.close
 
-def dumpListDictToCSV(listDict, csvName, delimiter, header, encoding='utf-8'):
+def dumpListDictToCSV(listDict, csvName, delimiter, header):
     """
     Purpose: dumps dictionary array to CSV file
 
@@ -60,16 +60,15 @@ def dumpListDictToCSV(listDict, csvName, delimiter, header, encoding='utf-8'):
                 of the string values contained in dictList or its keys.
         header  - list of keys in order for output columns. These must match the
                 keys, but possibly in different order
-        encoding - Specify encoding if some characters are not utf-8
 
     Output:
         The CSV file in cvsFile contains the dictionary data where the first
         row is a header line of dictionary keys for the columns.
+        To accommodate rare weird characters, output is encoded 'utf-8'
     """
 
-    with open(csvName, "w", newline="") as csvfile:
+    with open(csvName, "w", newline="", encoding="utf-8") as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=header)
         writer.writeheader()
         for dict in listDict:
             writer.writerow(dict)
-
