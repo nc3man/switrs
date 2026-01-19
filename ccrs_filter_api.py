@@ -4,7 +4,7 @@
 from collections import defaultdict
 from dumpDictToCSV import dumpListDictToCSV
 from getDataCsv import getDataCsv
-from CCRS_resource_IDs import CCRS_resource_IDs
+from ccrs_resource_IDs import CCRS_resource_IDs
 from ccrs_query_utils import query_city_ccrs
 from ccrs_query_utils import query_ccrs_by_collision_ids
 
