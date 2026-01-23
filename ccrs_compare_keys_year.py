@@ -34,8 +34,8 @@ def intersect_keys(ka, kb):
     seta = set(ka)
     setb = set(kb)
     kcommon = list(seta & setb)
-    kaonly = ";".join(list(seta-setb))
-    kbonly = ";".join(list(setb-seta))
+    kaonly = "; ".join(list(seta-setb))
+    kbonly = "; ".join(list(setb-seta))
 
     return kcommon, kaonly, kbonly
 
@@ -55,13 +55,12 @@ def main():
         base_files = get_CCRS_processed(path, [f"{search_prefix}_{base_year}"], exclude=['nogeo','huge','poorgeo'])
 
         compare_year = compare_years[n]
-        compare_files = get_CCRS_processed(path, [f"{search_prefix}_{compare_year}"], exclude=['nogeo','huge','poorgeo'])
 
         for file in base_files:
             logger.append(f"base file: {file}")
             compare_file = file.replace(base_year, compare_year)
 
-            if compare_file in compare_files:
+            if os.path.exists(compare_file):
                 logger.append(f"compare file: {compare_file}")
 
                 dicts_base, keys_base  = getListDictCsv(file, ',')

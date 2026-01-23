@@ -21,8 +21,8 @@ import os
 
 path_left = './CCRS_raw_update_csv/'
 path_right = './CCRS_raw_update_api/'
-search_prefix = 'CCRS_injured_Carlsbad'
-compare_type = 'injured'
+search_prefix = 'CCRS_crashes_Carlsbad'
+compare_type = 'crashes'
 only_check_keys = False
 
 exclude_keys = ['Crash Date Time',
@@ -87,8 +87,8 @@ def intersect_keys(ka, kb):
     seta = set(ka)
     setb = set(kb)
     kcommon = list(seta & setb)
-    kaonly = ";".join(list(seta-setb))
-    kbonly = ";".join(list(setb-seta))
+    kaonly = "; ".join(list(seta-setb))
+    kbonly = "; ".join(list(setb-seta))
 
     return kcommon, kaonly, kbonly
 
