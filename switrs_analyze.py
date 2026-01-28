@@ -6,14 +6,15 @@ from dumpDictToCSV import dumpDictToCSV
 from getDataCsv import getDataCsv
 
 # User variables
-inpath = 'C:/Users/karl/bike/sdcbc/advocacy/encinitas/switrs/'
-crashes_file = inpath + 'Accident_242638.csv'
-parties_file = inpath + 'Party_242638.csv'
-victims_file = inpath + 'Victim_242638.csv'
-out_file = inpath + 'SWITRS_Encinitas_2020-2024-Oct.csv'
+inpath = 'C:/Users/karl/bike/sdcbc/advocacy/encinitas/switrs/260148/'
+crashes_file = inpath + 'Accident_260148.csv'
+parties_file = inpath + 'Party_260148.csv'
+victims_file = inpath + 'Victim_260148.csv'
+out_file = inpath + 'SWITRS_Encinitas_2024-2025.csv'
+
+VERBOSE = False
 
 # Do not edit below this line --------------------------------------------------
-
 # Helper functions
 
 def get_parties(case_id, parties):
@@ -41,8 +42,7 @@ def get_victims(case_id, victims):
 def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     case_id = crash['case_id']
     year = crash['accident_year']
-    date = crash['collision_date']
-    time = split_hhmm(crash['collision_time'])
+    date = f"{split_YMD(crash['collision_date'])} {split_hhmm(crash['collision_time'])}"
     if crash['intersection'] == 'Y':
         location = crash['primary_rd'] + ' @ ' + crash['secondary_rd']
     else:
@@ -64,7 +64,6 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     analyzed['Case_ID'].append(case_id)
     analyzed['Year'].append(year)
     analyzed['Date'].append(date)
-    analyzed['Time'].append(time)
     analyzed['Location'].append(location)
     analyzed['Weather/Surface'].append(weather_surface)
     analyzed['Collision Type'].append(collision_type)
@@ -74,7 +73,8 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
     analyzed['Hit & Run'].append(hit_run)
     analyzed['Severity'].append(severity)
 
-    print(f"CaseID:{case_id} Year:{year} Date:{date} time:{time} Location:{location} Weather/Surface:{weather_surface} Collision_Type:{collision_type} PCF:{pcf} PCF_Violation:{pcf_viol} Int/Turn:{int_turn} Hit_Run:{hit_run} Severity:{severity}")
+    if VERBOSE:
+        print(f"CaseID:{case_id} Year:{year} Date:{date} Location:{location} Weather/Surface:{weather_surface} Collision_Type:{collision_type} PCF:{pcf} PCF_Violation:{pcf_viol} Int/Turn:{int_turn} Hit_Run:{hit_run} Severity:{severity}")
 
     # Pull out relevant party data
     nparties = len(parties)
@@ -82,7 +82,10 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
         p_age_sex = parties[n]['party_age'] + '/' + parties[n]['party_sex']
         p_dir = parties[n]['dir_of_travel']
         p_movement = decode_movement(parties[n]['move_pre_acc'])
-        p_type = decode_party_type(int(parties[n]['party_type']))
+        try:
+            p_type = decode_party_type(int(parties[n]['party_type']))
+        except:
+            p_type = parties[n]['party_type']
         p_fault = parties[n]['at_fault']
         p_sobriety = decode_sobriety(parties[n]['party_sobriety'])
         p_drugs = decode_drugs(parties[n]['party_drug_physical'])
@@ -94,7 +97,9 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
         p_oaf_viol_cvc = parties[n]['oaf_viol_section'] + '.' + parties[n]['oaf_violation_suffix']
         
         prefix = f'P{n+1}'
-        print(f"{prefix}_Age/Sex:{p_age_sex} {prefix}_Type:{p_type} {prefix}_Dir:{p_dir} {prefix}_Movement:{p_movement} {prefix}_Fault:{p_fault} {prefix}_Sobriety:{p_sobriety} {prefix}_Drugs:{p_drugs} {prefix}_Other Associated Factors:{p_oaf} {prefix}_Other Associated Violation:{p_oaf_viol} {prefix}_OAF_CVC:{p_oaf_viol_cvc}")
+
+        if VERBOSE:
+            print(f"{prefix}_Age/Sex:{p_age_sex} {prefix}_Type:{p_type} {prefix}_Dir:{p_dir} {prefix}_Movement:{p_movement} {prefix}_Fault:{p_fault} {prefix}_Sobriety:{p_sobriety} {prefix}_Drugs:{p_drugs} {prefix}_Other Associated Factors:{p_oaf} {prefix}_Other Associated Violation:{p_oaf_viol} {prefix}_OAF_CVC:{p_oaf_viol_cvc}")
         
         analyzed[f'{prefix}_Age/Sex'].append(p_age_sex)
         analyzed[f'{prefix}_Type'].append(p_type)
@@ -129,7 +134,8 @@ def distill(crash, parties, victims, analyzed, nparty_max, nvictim_max):
         v_injury = decode_injury(int(victims[n]['victim_degree_of_injury']))
         
         prefix = f'V{n+1}'
-        print(f"{prefix}_Party:{v_party} {prefix}_Role:{v_role} {prefix}_Injury:{v_injury}")
+        if VERBOSE:
+            print(f"{prefix}_Party:{v_party} {prefix}_Role:{v_role} {prefix}_Injury:{v_injury}")
         analyzed[f'{prefix}_Party'].append(v_party)
         analyzed[f'{prefix}_Role'].append(v_role)
         analyzed[f'{prefix}_Injury'].append(v_injury)
@@ -149,9 +155,22 @@ def split_hhmm(time_digits):
         time = time_digits[0:2] + ':' + time_digits[2:]
     elif len(time_digits) == 3:
         time = time_digits[0:1] + ':' + time_digits[1:]
+    elif len(time_digits) == 2:
+        time = '0:' + time_digits[0:]
+    elif len(time_digits) == 1:
+        time = '0:0' + time_digits[0]
     else:
         time = time_digits
     return time
+
+def split_YMD(date_digits):
+    # reformat date yyyymmdd as mm/dd/yyyy
+    if len(date_digits) == 8:
+        date = date_digits[4:6] + '/' + date_digits[6:]+  '/' + date_digits[0:4]
+    else:
+        print(f"WARNING! - unrecognzable date={date_digits}")
+        date = date_digits
+    return date
       
 def decode_weather(code):
     if code == 'A':
@@ -595,7 +614,8 @@ def main():
         crash_parties = get_parties(crash['case_id'], parties)
         crash_victims = get_victims(crash['case_id'], victims)
         n+=1
-        print(f"\nCrash {n} --  #parties: {len(crash_parties)}   #victims: {len(crash_victims)} ")
+        if VERBOSE:
+            print(f"\nCrash {n} --  #parties: {len(crash_parties)}   #victims: {len(crash_victims)} ")
         
         analyzed = distill(crash, crash_parties, crash_victims, analyzed, nparty_max, nvictim_max)
         
