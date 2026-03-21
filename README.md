@@ -19,7 +19,7 @@ python source for distilling SWITRS and CCRS raw data
 | dumpDictToCSV.py | Dumps python structures to csv file |
 | pull_ccrs.py | Traverses directory tree searching for requested CCRS files |
 | geocodeGoogle.py | Calls Google Geolocation API to get (lat,lon) of crash |
-| inpoly.py | Test if (lat,lon) point on map is in a closed (latitude,longitud) curve |
+| inpoly.py | Test if (lat,lon) point on map is interior to a closed (latitude,longitude) polygon |
 | createCrashPlacemarks.py | Creates a placemark for each crash to display on a map |
 
 ## Notes
