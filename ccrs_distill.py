@@ -10,14 +10,16 @@ import time
 import os
 
 # User variables
-years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
-search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside', 'San Diego']
-# years = ['2025']
-# search_cities = ['Solana Beach']
-# inpath = './CCRS_raw_update_csv/'
-# outpath = './CCRS_new_format/'
-inpath = './CCRS_get_raw_api/'
-outpath = './CCRS_from_raw_api/'
+# years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
+# search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside', 'San Diego']
+
+years = ['2015', '2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]  # careful with 2015
+search_cities = ['Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista']
+
+inpath = './CCRS_raw_update_csv/'
+outpath = './CCRS_new_format/'
+# inpath = './CCRS_get_raw_api/'
+# outpath = './CCRS_from_raw_api/'
 
 # Do not edit below this line --------------------------------------------------
 

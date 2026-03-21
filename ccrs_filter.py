@@ -5,17 +5,23 @@ from collections import defaultdict
 from dumpDictToCSV import dumpListDictToCSV
 from getDataCsv import getListDictCsv
 import time
+import sys
 
 # User variables
-# years = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-# search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista']
-years = ['2015']
-search_cities = ['San Diego']
+# years = ['2015', '2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
+# search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista', 'San Diego']
+# search_cities = ['3700','3797','3714','3715'] # for all NON-incorporated areas in SD County
+
+years = ['2015', '2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]  # careful with 2015
+search_cities = ['Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista']
 
 inpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
 outpath = 'C:/Users/karl/python/switrs/CCRS_raw_update_csv/'
 
 # Do not edit below this line --------------------------------------------------
+
+city_codes_only = ['3700','3797','3714','3715']
+# CityName = ['Unincorporated','Uc San Diego','San Diego State Univ','San Diego Harbor']
 
 def run_filters(city_search,year, crashes_all, parties_all, injureds_all, crash_keys, party_keys, injured_keys):
 
@@ -25,10 +31,18 @@ def run_filters(city_search,year, crashes_all, parties_all, injureds_all, crash_
         print(f"\nTrimming full CCRS raw data for {year} and {city}")
         begtime = time.perf_counter()
 
-        # filter crashes based on City Name
-        crashes = [crash for crash in crashes_all if crash["City Name"]==city]
-        # remove crashes not in API search: NCIC=3700 ???
-        # crashes = [crash for crash in crashes if crash["NCIC Code"]!="3700"]
+        # filter crashes based on City Name or City Code
+        if city in city_codes_only:
+            crashes = [crash for crash in crashes_all if crash["City Code"]==city]
+        else:
+            crashes = [crash for crash in crashes_all if crash["City Name"]==city]
+
+        if len(crashes) > 0:
+            city = crashes[0]['City Name']
+        else:
+            print(f"Error: no city name or city code match for {city}")
+            sys.exit()
+
         collision_ids = [crash["Collision Id"] for crash in crashes]
         print(f"\nTime to filter {city} crashes: {time.perf_counter()-begtime:.4f} sec")
         begtime = time.perf_counter()

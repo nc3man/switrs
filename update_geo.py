@@ -6,16 +6,17 @@ from getDataCsv import getListDictCsv
 from geocodePelias import geocode_pelias
 from geocodeGoogle import geocode_google
 from geopy.distance import geodesic
+from pull_ccrs import get_CCRS_processed
 import numpy as np
 import time
 import os
 
 # User variables
 geoTest = True  # True means just estimate what needs to be done for Google API costs. False calls Google API $$$
-inpath = 'C:/Users/karl/python/switrs/CCRS_new_format/'
+# inpath = 'C:/Users/karl/python/switrs/CCRS_copied_geo/'
 # inpath = 'C:/Users/karl/python/switrs/CCRS/CCRS_bike-ped/'
-# inpath = 'C:/Users/karl/python/switrs/CCRS_test/'
-outpath = 'C:/Users/karl/python/switrs/CCRS_updated_geo/'  # not updated if geoTest = True
+inpath = 'C:/Users/karl/python/switrs/CCRS/CCRS_cities_all/'
+outpath = 'C:/Users/karl/python/switrs/CCRS_bike-ped_geo/'  # not updated if geoTest = True
 
 update = "ccrs" # only valid option now. Updates poor geo CCRS only + calls google API for blank (lat,lon)
 # update = "all_to_pelias"
@@ -26,17 +27,7 @@ update = "ccrs" # only valid option now. Updates poor geo CCRS only + calls goog
 # Do not edit below this line ----------------------------------------------
 
 
-# Helper functions ---------------------------------------------------------
-def get_CCRS_processed(root_dir):
-    file_list = []
-    counter = 1
-    
-    for root, directories, filenames in os.walk(root_dir):
-        for filename in filenames:
-            if '.csv' in filename and filename.find('nogeo')<0:
-                file_list.append(os.path.join(root, filename))
-                 
-    return file_list            
+# Helper functions ---------------------------------------------------------      
 
 def add_geo(crashes, geoTest):
     # if geoTest=True, then only the number of google API geocode calls is printed to estimate cost
@@ -158,7 +149,8 @@ def update_geo_google(crashes):
 def main():
     
     begtime_all = time.perf_counter()
-    geo_files = get_CCRS_processed(inpath)
+    geo_files = get_CCRS_processed(inpath, include=[], exclude=['Unincorporated'])
+        # exclude=['poorgeo','nogeo','huge','all','_bike_','_bike-ped_'])
     GEOCOUNT = 0
     
     for csvfile in geo_files:

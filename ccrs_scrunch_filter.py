@@ -11,20 +11,21 @@ import time
 import os
 
 # User variables
-FILENAME_SEARCH = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista', 'San Diego']
-inpath = './CCRS_new_format/'
+# FILENAME_SEARCH = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista', 'San Diego']
+FILENAME_SEARCH = ['Santee','Poway','Lemon Grove','La Mesa','Imperial Beach','El Cajon','Coronado','Carlsbad']
+inpath = './CCRS/'
 
-search = ['bicy']
-output_file_template = 'CCRS_bike_FILENAME_2015_to_2025-12-31.csv'
-outpath = './CCRS/CCRS_bike/'
+# search = ['bicy']
+# output_file_template = 'CCRS_bike_FILENAME_2015_to_2025-12-31.csv'
+# outpath = './CCRS/CCRS_bike/'
 
 # search = ['bicy','pedestrian']
 # output_file_template = 'CCRS_bike-ped_FILENAME_2015_to_2025-12-31.csv'
 # outpath = './CCRS/CCRS_bike-ped/'
 
-# search = ['all']
-# output_file_template = 'CCRS_all_FILENAME_2015_to_2025-12-31.csv'
-# outpath = './CCRS/CCRS_cities_all/'
+search = ['all']
+output_file_template = 'CCRS_all_FILENAME_2015_to_2025-12-31.csv'
+outpath = './CCRS/CCRS_cities_all/'
 
 # FILENAME_SEARCH = ['bike']
 # search = ['bicy']  # keep crashes where ANY field matches a string in the search list
@@ -167,6 +168,8 @@ def main():
         # save scrunched crashes only
         out_file = outpath + output_file_template.replace('FILENAME', string)
         dumpListDictToCSV(matched_crashes_sorted, out_file, ',', used_keys)
+        
+        print(f"Scrunched file: {out_file}")
    
 # Main body
 if __name__ == '__main__':
