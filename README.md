@@ -7,9 +7,9 @@ python source for distilling SWITRS and CCRS raw data
 | --- | --- |
 | ccrs_filter.py | Filters raw CSV files into manageable files by city and year |
 | ccrs_distill.py | Distills output of ccrs_filter into csv file with one record per CollisionId |
-| copy_geo_collisionID.py | Copies previous updated geolocations into the output of ccrs_distill |
-| update_geo.py | For remaining missing or bad geolocations, update with Google Geolocation API |
-| update_geo.py | For remaining missing or bad geolocations, update with Google Geolocation API |
+| copy_geo_collisionID.py | Copies previously updated geolocations into the output of ccrs_distill |
+| update_geo.py | For remaining missing or bad geolocations, update with Google Geolocation API. Set geoTest = True to estimate Google requests cost |
+| ccrs_scrunch_filter.py | For each city, concatenates all years, filters by bike, bike-ped for CCRS_[cities_all,bike,bike-ped] folders |
 | filter_ccrs_locations.py | For processed CCRS files, display crashes on a map, optionally selecting subset with mouse |
 
 ## Helper Function Source
