@@ -8,17 +8,15 @@ import os
 
 # User variables
 
-path_geo = './CCRS/CCRS_bike-ped/'
-path_to_update = './CCRS/'
+path_geo = './CCRS/CCRS_cities_all/'
+path_to_update = './CCRS_new_format/'
 path_updated = './CCRS_copied_geo/'
-string_search = [''] # in case path_geo files don't match update_files, use all crashes in geo_files matching string_search
-
 
 # Helper functions -------------------------------------------------------------
 def copy_geo(update_geo, crash):
     geo_keys = ['Latitude','Longitude','GeoSrc','GeoMatchType','GeoConf','GeoAccuracy','GeoBbox']
 
-    # update geo for this crash
+    # copy previous geo update for this crash
     for key in geo_keys:
         crash[key] = update_geo[key]
 
@@ -54,18 +52,20 @@ def main():
     geo_updated_collisionIds = geo_updated.keys()
 
     for file in update_files:
-        matched_geo_file = file.replace(path_to_update, path_geo)
         crashes, crash_keys  = getListDictCsv(file, ',')
+        ncopy = 0
 
         for crash in crashes:
             if crash['CollisionId'] in geo_updated_collisionIds:
                 crash = copy_geo(geo_updated[crash['CollisionId']], crash)
+                ncopy += 1
 
-        # save updated crashes
-        out_file = file.replace(path_to_update, path_updated)
-        dumpListDictToCSV(crashes, out_file, ',', crash_keys)
-
-    print(f"Updated geocoded files are in {path_updated}")
+        if ncopy > 0:
+            # save updated crashes
+            out_file = file.replace(path_to_update, path_updated)
+            dumpListDictToCSV(crashes, out_file, ',', crash_keys)
+            print(f"\nAdded geo to {ncopy} crashes")
+            print(f"Updated in {out_file}")
 
 # Main body
 if __name__ == '__main__':
