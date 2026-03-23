@@ -12,6 +12,30 @@ import urllib.parse
 # endpoint prefix depends on search type (SQL or OData)
 BASE_URL_SQL = "https://data.ca.gov/api/3/action/datastore_search_sql"
 BASE_URL_ODATA = "https://data.ca.gov/api/3/action/datastore_search"
+CITY_CODES = {
+    'Carlsbad':'3701',
+    'Chula Vista':'3702',
+    'Coronado':'3703',
+    'Del Mar':'3704',
+    'El Cajon':'3705',
+    'Encinitas':'3782',
+    'Escondido':'3706',
+    'Imperial Beach':'3707',
+    'La Mesa':'3708',
+    'Lemon Grove':'3720',
+    'National City':'3709',
+    'Oceanside':'3710',
+    'Poway':'3780',
+    'San Diego':'3711',
+    'San Marcos':'3712',
+    'Santee':'3781',
+    'Solana Beach':'3783',
+    'Vista':'3713',
+    'San Diego Harbor':'3715',
+    'San Diego State Univ':'3714',
+    'Uc San Diego':'3797',
+    'Unincorporated':'3700'
+    }
 
 def query_city_ccrs(city_name, resource_id, use_like=False, limit=20000, offset=0, mode="auto"):
     """
@@ -29,6 +53,9 @@ def query_city_ccrs(city_name, resource_id, use_like=False, limit=20000, offset=
         List[dict]: Records returned from the API.
     """
 
+    # will use City Code as the unique jurisdiction identifier
+    city_code = CITY_CODES[city_name]
+
     if mode not in ("sql", "odata", "auto"):
         raise ValueError("mode must be 'sql', 'odata', or 'auto'")
 
@@ -38,7 +65,7 @@ def query_city_ccrs(city_name, resource_id, use_like=False, limit=20000, offset=
 
     if mode == "sql":
         # Build SQL query
-        where_clause = f'"City Name" LIKE \'%{city_name}%\'' if use_like else f'"City Name" = \'{city_name}\''
+        where_clause = f'"City Code" LIKE \'%{city_code}%\'' if use_like else f'"City Code" = \'{city_code}\''
         sql = (
             f'SELECT * FROM "{resource_id}" '
             f'WHERE {where_clause} '
@@ -48,7 +75,7 @@ def query_city_ccrs(city_name, resource_id, use_like=False, limit=20000, offset=
 
     elif mode == "odata":
         # OData requires exact match only
-        filters = { "City Name": city_name }
+        filters = { "City Code": city_code }
         encoded_filters = urllib.parse.quote(str(filters).replace("'", '"'))
         url = (
             f"{BASE_URL_ODATA}"
@@ -74,7 +101,7 @@ def query_city_ccrs(city_name, resource_id, use_like=False, limit=20000, offset=
         print(response.text)
         exit()
 
-def query_ccrs_by_collision_ids(collision_ids, resource_id, key, batch_size=200, page_size=200):
+def query_ccrs_by_collision_ids(collision_ids, resource_id, key, batch_size=200, page_size=2000):
     """
     Query CCRS by a list of CollisionIds, handling batching and pagination.
 
@@ -145,7 +172,13 @@ def remove_blanks(dicts):
 def reformat_time(crashes):
     for crash in crashes:
         for key in ['Crash Date Time','PreparedDate','ReviewedDate',\
-                    'CreatedDate','ModifiedDate']:
+                    'CreatedDate','ModifiedDate','NotificationDate']:
             if crash[key] and 'T' in crash[key]:
                 date_time = datetime.strptime(crash[key], '%Y-%m-%dT%H:%M:%S')
                 crash[key] = date_time.strftime('%m/%d/%Y %I:%M:%S %p')
+
+def dedupe(dictlist,primary_key):
+    # removes duplicates of the primary_key in dictlist. Keeps the last one
+    unique = {d[primary_key]: d for d in dictlist}
+    dictlist = list(unique.values())
+    return dictlist

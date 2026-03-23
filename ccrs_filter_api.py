@@ -7,18 +7,21 @@ from getDataCsv import getDataCsv
 from ccrs_resource_IDs import CCRS_resource_IDs
 from ccrs_query_utils import query_city_ccrs
 from ccrs_query_utils import query_ccrs_by_collision_ids
+from ccrs_query_utils import dedupe
 
 import time
 
 # User variables
 # years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
-# search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside']
-years = ['2025']
-search_cities = ['Encinitas']
-outpath = 'C:/Users/karl/python/switrs/CCRS_get_raw_api/'
+years = ['2023']
+search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside',
+    'Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','San Diego',
+    'Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista',
+    'Unincorporated','San Diego Harbor','San Diego State Univ','Uc San Diego']
+
+outpath = 'C:/Users/karl/python/switrs/CCRS_test2/'
 
 # Do not edit below this line --------------------------------------------------
-
 
 def main():
 
@@ -27,7 +30,7 @@ def main():
     for year in years:
         for city in search_cities:
 
-            print(f"Trimming full CCRS raw data for {year} and {city}")
+            print(f"Fetching CCRS raw data for {year} and {city}")
             begtime = time.perf_counter()
 
             # Set up CCRS API endpoint URLs
@@ -39,9 +42,11 @@ def main():
 
             # fetch parties data filtered by selected collision_ids
             parties = query_ccrs_by_collision_ids(collision_ids, parties_resource, "CollisionId")
+            parties = dedupe(parties,'PartyId')
 
             # fetch injuries data filtered by selected collision_ids
             injureds = query_ccrs_by_collision_ids(collision_ids, injuries_resource, "CollisionId")
+            injureds = dedupe(injureds,'InjuredWitPassId')
             # only save the real injured, excluding witnesses primarily
             injureds = [injured for injured in injureds if \
                     injured['InjuredPersonType'] and injured["ExtentOfInjuryCode"] and \
@@ -49,15 +54,16 @@ def main():
 
             # save filtered dictionaries to CSV files
             if crashes:
-                crash_out = outpath + f'CCRS_crashes_{city}_{year}.csv'
+                city_name = crashes[0]['City Name']
+                crash_out = outpath + f'CCRS_crashes_{city_name}_{year}.csv'
                 dumpListDictToCSV(crashes, crash_out, ',',  list(crashes[0].keys()) )
                 print(f"\n{len(crashes)} Filtered Crashes saved in {crash_out}")
 
-                party_out = outpath + f'CCRS_parties_{city}_{year}.csv'
+                party_out = outpath + f'CCRS_parties_{city_name}_{year}.csv'
                 dumpListDictToCSV(parties, party_out, ',',  list(parties[0].keys()) )
                 print(f"{len(parties)} Filtered parties saved in {party_out}")
 
-                injured_out = outpath + f'CCRS_injured_{city}_{year}.csv'
+                injured_out = outpath + f'CCRS_injured_{city_name}_{year}.csv'
                 dumpListDictToCSV(injureds, injured_out, ',',  list(injureds[0].keys()) )
                 print(f"{len(injureds)} Filtered injuries saved in {injured_out}")
 
