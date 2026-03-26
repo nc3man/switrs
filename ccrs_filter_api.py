@@ -12,13 +12,14 @@ from ccrs_query_utils import dedupe
 import time
 
 # User variables
-years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
+# years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
+years = ['2024','2025']
 search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside',
     'Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','San Diego',
     'Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista',
     'Unincorporated','San Diego Harbor','San Diego State Univ','Uc San Diego']
 
-outpath = 'C:/Users/karl/python/switrs/CCRS_raw_update_api/'
+outpath = './CCRS_raw_update_api/'
 
 # Do not edit below this line --------------------------------------------------
 

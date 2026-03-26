@@ -7,7 +7,7 @@ from pull_ccrs import get_CCRS_processed
 import os
 
 # User variables
-path_geo = './CCRS-20260325T063837Z-1-001/CCRS/CCRS_cities_all/'
+path_geo = './CCRS/CCRS_cities_all/'
 path_to_update = './CCRS_from_raw_api/'
 path_updated = './CCRS_copied_geo/'
 

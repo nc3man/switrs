@@ -17,9 +17,7 @@ FILENAME_SEARCH = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Ma
     'National City','San Marcos','San Diego Harbor','San Diego State Univ','Uc San Diego','Unincorporated']
 inpath = './CCRS/'
 
-search_type = 'bike'
-# search_type = 'bike-ped'
-# search_type = 'cities_all'
+search_types = ['bike','bike-ped','cities_all']
 output_file_template = 'CCRS_SEARCHTYPE_FILENAME_2016_to_2025-12-31.csv'
 output_path_template = './CCRS/CCRS_SEARCHTYPE/'
 
@@ -78,35 +76,7 @@ def filter(search_type, crashes, crash_keys, keys_max):
             matched_crashes.append(crash)
             
     return matched_crashes
-    
-def filter_orig(search_type, crashes, crash_keys, keys_max):
-    matched_crashes = []
-
-    for crash in crashes:
-        keepRow = False
-        for key in crash_keys:
-            # exclude 'Pedestrian Action' column (almost always has string 'PEDESTRIAN')
-            if key == 'Pedestrian Action':
-                continue
-            # exclude 'Pn_Safety Equipment' column (often contains 'MOTOR BICYCLE' for motorcycle party)
-            if 'Safety Equipment' in key:
-                continue
-            # exclude 'Pn_Vehicle' column (can contain e.g. 'MotorizedBicycle' for non-BICYCLIST)
-            if 'Vehicle' in key and key[0]=='P':
-                continue
-            for s in row_search:
-                if s.lower() in crash[key].lower() or s=='all':
-                    keepRow = True
-        
-        if keepRow:
-            # fill in blanks for all keys between last party key and end of keys_max
-            last_key = crash_keys[-1]
-            extend = {k:"" for k in keys_max[keys_max.index(last_key)+1:]}
-            crash.update(extend)           
-            matched_crashes.append(crash)
-            
-    return matched_crashes
-    
+       
 def trim_blank_parties(crashes, keys, nparty_max):
     
     removed_keys = []
@@ -152,41 +122,42 @@ def date_sort(crashes):
 
 def main():
     
-    outpath = output_path_template.replace('SEARCHTYPE', search_type)
-
-    for string in FILENAME_SEARCH:
-        found_files = get_CCRS_processed(inpath, [string], exclude=['poorgeo','nogeo','huge','_all_','_bike_','_bike-ped_'])
-        matched_crashes_all = []
- 
-        # first, need header to cover max # of parties
-        nparty_max = 0
-        for csvfile in found_files:
-            crashes, crash_keys  = getListDictCsv(csvfile, ',')
-            for crash in crashes:
-                if int(crash['Num Parties']) > nparty_max:
-                    nparty_max = int(crash['Num Parties'])
-                    keys_max = crash_keys
-
-        for csvfile in found_files:
-            crashes, crash_keys  = getListDictCsv(csvfile, ',')
-            search_matched_crashes = filter(search_type, crashes, crash_keys, keys_max)
-            matched_crashes_all += search_matched_crashes
-            
-        # not all Party keys may be necessary after filtering    
-        used_keys = trim_blank_parties(matched_crashes_all, keys_max, nparty_max)
+    for search_type in search_types:
+        outpath = output_path_template.replace('SEARCHTYPE', search_type)
         
-        # sort the search-matched crashes by date
-        matched_crashes_sorted = date_sort(matched_crashes_all)
+        for string in FILENAME_SEARCH:
+            found_files = get_CCRS_processed(inpath, [string], exclude=['poorgeo','nogeo','huge','_all_','_bike_','_bike-ped_'])
+            matched_crashes_all = []
+    
+            # first, need header to cover max # of parties
+            nparty_max = 0
+            for csvfile in found_files:
+                crashes, crash_keys  = getListDictCsv(csvfile, ',')
+                for crash in crashes:
+                    if int(crash['Num Parties']) > nparty_max:
+                        nparty_max = int(crash['Num Parties'])
+                        keys_max = crash_keys
+    
+            for csvfile in found_files:
+                crashes, crash_keys  = getListDictCsv(csvfile, ',')
+                search_matched_crashes = filter(search_type, crashes, crash_keys, keys_max)
+                matched_crashes_all += search_matched_crashes
+                
+            # not all Party keys may be necessary after filtering    
+            used_keys = trim_blank_parties(matched_crashes_all, keys_max, nparty_max)
             
-        # save scrunched crashes only
-        out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', search_type)
-        if search_type == 'cities_all':
-            out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', 'all')
+            # sort the search-matched crashes by date
+            matched_crashes_sorted = date_sort(matched_crashes_all)
+                
+            # save scrunched crashes only
+            if search_type == 'cities_all':
+                out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', 'all')
+            else:
+                out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', search_type)
+            out_file = out_file.replace('__','_')  # if underscore used to unique filename: eg 'Vista' vs 'Chula Vista', replace '__')
+            dumpListDictToCSV(matched_crashes_sorted, out_file, ',', used_keys)
             
-        out_file = out_file.replace('__','_')  # if underscore used to unique filename: eg 'Vista' vs 'Chula Vista', replace '__')
-        dumpListDictToCSV(matched_crashes_sorted, out_file, ',', used_keys)
-        
-        print(f"Scrunched file: {out_file}")
+            print(f"Scrunched file: {out_file}")
    
 # Main body
 if __name__ == '__main__':
