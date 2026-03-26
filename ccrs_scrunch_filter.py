@@ -17,9 +17,9 @@ FILENAME_SEARCH = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Ma
     'National City','San Marcos','San Diego Harbor','San Diego State Univ','Uc San Diego','Unincorporated']
 inpath = './CCRS/'
 
-# search_type = 'bike'
+search_type = 'bike'
 # search_type = 'bike-ped'
-search_type = 'cities_all'
+# search_type = 'cities_all'
 output_file_template = 'CCRS_SEARCHTYPE_FILENAME_2016_to_2025-12-31.csv'
 output_path_template = './CCRS/CCRS_SEARCHTYPE/'
 
@@ -42,14 +42,15 @@ def filter(search_type, crashes, crash_keys, keys_max):
     else:
         print(f"Unknown search_type = {search_type}")
         sys.exit()
+    
+    # only check these keys for row_search substrings
+    check_keys = [k for k in crash_keys if any(s in k for s in SEARCH_KEYS)]
 
     for crash in crashes:
         if search_type == 'cities_all':
             keepRow = True
         else:
             keepRow = False
-            # check specific keys first
-            check_keys = [k for k in crash_keys if any(s in k for s in SEARCH_KEYS)]
             for key in check_keys:
                 for s in row_search:
                     if s.lower() in crash[key].lower():
@@ -179,9 +180,10 @@ def main():
             
         # save scrunched crashes only
         out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', search_type)
-        out_file = out_file.replace('__','_')  # if underscore used to unique filename: eg 'Vista' vs 'Chula Vista', replace '__')
         if search_type == 'cities_all':
             out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', 'all')
+            
+        out_file = out_file.replace('__','_')  # if underscore used to unique filename: eg 'Vista' vs 'Chula Vista', replace '__')
         dumpListDictToCSV(matched_crashes_sorted, out_file, ',', used_keys)
         
         print(f"Scrunched file: {out_file}")
