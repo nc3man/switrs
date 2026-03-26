@@ -13,11 +13,9 @@ import os
 
 # User variables
 geoTest = True  # True means just estimate what needs to be done for Google API costs. False calls Google API $$$
-# inpath = 'C:/Users/karl/python/switrs/CCRS_copied_geo/'
-# inpath = 'C:/Users/karl/python/switrs/CCRS/CCRS_bike-ped/'
-inpath = 'C:/Users/karl/python/switrs/CCRS/CCRS_cities_all/'
-outpath = 'C:/Users/karl/python/switrs/CCRS_bike-ped_geo/'  # not updated if geoTest = True
-
+# inpath = './CCRS/CCRS_bike-ped/'
+inpath = './CCRS_to_geo_hold/'
+outpath = './CCRS_updated_geo/'  # not updated if geoTest = True
 update = "ccrs" # only valid option now. Updates poor geo CCRS only + calls google API for blank (lat,lon)
 # update = "all_to_pelias"
 # update = "ccrs_to_pelias"
@@ -149,7 +147,7 @@ def update_geo_google(crashes):
 def main():
     
     begtime_all = time.perf_counter()
-    geo_files = get_CCRS_processed(inpath, include=[], exclude=['Unincorporated'])
+    geo_files = get_CCRS_processed(inpath, include=[], exclude=[])
         # exclude=['poorgeo','nogeo','huge','all','_bike_','_bike-ped_'])
     GEOCOUNT = 0
     

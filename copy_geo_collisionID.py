@@ -7,9 +7,8 @@ from pull_ccrs import get_CCRS_processed
 import os
 
 # User variables
-
-path_geo = './CCRS/CCRS_cities_all/'
-path_to_update = './CCRS_new_format/'
+path_geo = './CCRS-20260325T063837Z-1-001/CCRS/CCRS_cities_all/'
+path_to_update = './CCRS_from_raw_api/'
 path_updated = './CCRS_copied_geo/'
 
 # Helper functions -------------------------------------------------------------
@@ -44,7 +43,7 @@ def added_geo_collisionIds(geo_files):
 
 def main():
 
-    update_files = get_CCRS_processed(path_to_update, ['CCRS'], exclude=['nogeo','huge','poorgeo'])
+    update_files = get_CCRS_processed(path_to_update, ['CCRS'], exclude=['nogeo','huge','poorgeo','bike','bike-ped','all'])
     geo_files = get_CCRS_processed(path_geo, ['CCRS'], exclude=['nogeo','huge','poorgeo'])
 
     # first get all CollisionIds that have updated geolocation

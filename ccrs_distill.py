@@ -3,23 +3,22 @@
 # Imports
 from dumpDictToCSV import dumpListDictToCSV
 from getDataCsv import getListDictCsv
-from update_geo import add_geo
 from CVC_dictionary import lookup_cvc
 import numpy as np
 import time
 import os
 
 # User variables
-# years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
-# search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside', 'San Diego']
+years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
+search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside',
+    'Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','San Diego',
+    'Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista',
+    'Unincorporated','San Diego Harbor','San Diego State Univ','Uc San Diego']
 
-years = ['2015', '2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]  # careful with 2015
-search_cities = ['Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista']
-
-inpath = './CCRS_raw_update_csv/'
-outpath = './CCRS_new_format/'
-# inpath = './CCRS_get_raw_api/'
-# outpath = './CCRS_from_raw_api/'
+inpath = './CCRS_raw_update_api/'
+outpath = './CCRS_from_raw_api/'
+# inpath = './CCRS_raw_update_csv/'
+# outpath = './CCRS_newest/'
 
 # Do not edit below this line --------------------------------------------------
 
@@ -27,9 +26,6 @@ outpath = './CCRS_new_format/'
 M2FT = 3.280839895 # convert meters to feet
 INJURY_PERSON_TYPE = ['Driver', 'Bicyclist', 'Pedestrian', 'Passenger', 'Other']               
 INJURY_TYPE =['Fatal','SuspectSerious','SuspectMinor','PossibleInjury']
-geoCode = True  # adds a TON of time (and $$$) if true and and geoTest = False
-geoTest = True  # prints out number of crashes to geocode w/o calling Google API to assest cost
-# note NEVER run geoTest = False here because copy_geo_data.py needs to go first to avoid redundant $$$ geo updates
 
 INJURY_TABLE_KEYS = []
 for person in INJURY_PERSON_TYPE:
@@ -40,18 +36,16 @@ INJURY_FATAL_KEYS = np.array(['Fatal' in key for key in INJURY_TABLE_KEYS], dtyp
 logpath = outpath + 'logs/'
 
 # Helper functions
-
-def get_parties(collision_id, parties):
-    party_found = [party for party in parties if party['CollisionId'] == collision_id]
-    
-    # ensure that the party_found list is in party_number order
-    parties_found = []
-    for n in range(len(party_found)):
-        for party in party_found:
+   
+def order_parties(parties):
+    # parties for a particular crash may not be ordered by PartyNumber. Reorder so
+    parties_reordered = []
+    for n in range(len(parties)):
+        for party in parties:
             if int(party['PartyNumber']) == n+1:
-                parties_found.append(party)
+                parties_reordered.append(party)
         
-    return parties_found
+    return parties_reordered
     
 def distill(crash, parties, injureds, nparty_max, logger):
     import CVC_dictionary
@@ -81,6 +75,11 @@ def distill(crash, parties, injureds, nparty_max, logger):
             road_condition = road_condition + ' + ' +  crash['Road Condition 2'] 
     except:
         road_condition = 'n/a' # before 2016
+    
+    if "Special Condition" in crash:
+        special_condition = crash['Special Condition']
+    else:
+        special_condition = ''
         
     traffic_control_devices = decode_traffic_control_device(crash['TrafficControlDeviceCode'])
 
@@ -143,6 +142,7 @@ def distill(crash, parties, injureds, nparty_max, logger):
     analyzed['Weather'] = weather
     analyzed['Roadway Surface Desc'] = roadway_surface
     analyzed['Road Condition'] = road_condition
+    analyzed['Special Condition'] = special_condition
     analyzed['Traffic Control Device Desc'] = traffic_control_devices 
     analyzed['Primary Road'] = primary_road
     analyzed['Secondary Road'] = secondary_road
@@ -171,10 +171,10 @@ def distill(crash, parties, injureds, nparty_max, logger):
     add_injury_counts(analyzed, injureds, logger)
     
     # CCRS total injury counts may differ from our count - record any deltas
-    if num_injured != analyzed['Num Injured']:
+    if num_injured and (num_injured != analyzed['Num Injured']):
         logger['logfile'].write(f'CID:{collision_id} CCRS num_injured={num_injured} != Calculated num_injured={analyzed['Num Injured']}\n')
         logger['nwarnings'] += 1
-    if num_killed != analyzed['Num Killed']:
+    if num_killed and (num_killed != analyzed['Num Killed']):
         logger['logfile'].write(f'CID:{collision_id} CCRS num_killed={num_killed} != Calculated num_killed={analyzed['Num Killed']}\n')
         logger['nwarnings'] += 1
                    
@@ -192,23 +192,34 @@ def distill(crash, parties, injureds, nparty_max, logger):
 def add_party(analyzed, party, injured_party):
     # Pull out relevant party data
     p_num = party['PartyNumber']
+    p_id = party['PartyId']
     p_type = party['PartyType']
     p_age = party['StatedAge']
     p_sex = party['GenderDescription']
+    p_airbag = party['AirbagDescription']
+    p_safety_equip = party['SafetyEquipmentDescription']
+    p_special_info = party['Special Information']
     try:
-        p_dir = party['InattentionDirectionOfTravel']
-        if len(p_dir) > 1:  # contains InAttention info - direction is last
-            dir = p_dir[-1]
-            inattention = p_dir[0:len(p_dir)-1]
-            p_dir = f'{dir}-{inattention}'
+        p_dir = party['DirectionOfTravel'] # new api format
+        p_inattention = party['Inattention']
     except:
-        p_dir = party['DirectionOfTravel'] # before 2016
-    p_lane = party['Lane']
+        p_dir = party['InattentionDirectionOfTravel']  # old csv format
+        p_inattention = ''
+        if len(p_dir) > 1:  # contains InAttention info - direction is last
+            p_dir = p_dir[-1]
+            p_inattention = p_dir[0:len(p_dir)-1]
+    p_street = party['StreetOrHighwayName']
+    if party['Lane']:
+        p_lane = party['Lane']
+        if party['TotalLanes']:
+            p_lane = f"{p_lane} of {party['TotalLanes']}"
+    else:
+        p_lane = ''
     p_movement = party['MovementPrecCollDescription']
     try:
+        p_vehicle = party['Vehicle1TypeDesc'] + ': ' + party['Vehicle1Year'] + '/' + party['Vehicle1Make'] + '/' + party['Vehicle1Model'] + '/' + party['Vehicle1Color'] 
+    except:            
         p_vehicle = party['V1Year'] + '/' + party['V1Make'] + '/' + party['V1Model'] + '/' + party['V1Color']
-    except:    
-        p_vehicle = party['Vehicle1Year'] + '/' + party['Vehicle1Make'] + '/' + party['Vehicle1Model'] + '/' + party['Vehicle1Color']
     p_speed_limit = party['SpeedLimit']
     p_fault = party['IsAtFault']
     p_sobriety = party['SobrietyDrugPhysicalDescription1']
@@ -217,55 +228,78 @@ def add_party(analyzed, party, injured_party):
     try:
         p_oaf = party['Other Associate Factor']
     except:
-        p_oaf = ''    # before 2016
+        p_oaf = ''   
+    try:
+        p_special_information = party['Special Information']
+    except:
+        p_oaf = ''   
         
     # concatenate pertinent injured info corresponding to this party
     p_injured_list = ''
+    p_injured_list_id = ''
     p_injury_extent_list = ''
     if len(injured_party) > 0:
         for injured in injured_party:
             p_injured_list = p_injured_list + f"{injured['InjuredPersonType']},"
+            p_injured_list_id = p_injured_list_id + f"{injured['InjuredWitPassId']}~"
             p_injury_extent_list = p_injury_extent_list + f"{get_injury_extent(injured['ExtentOfInjuryCode'])},"
         p_injured_list = p_injured_list[0:-1]  # strip trailing comma
+        p_injured_list_id = p_injured_list_id[0:-1]  # strip trailing separator
         p_injury_extent_list = p_injury_extent_list[0:-1]  # strip trailing comma
 
     prefix = f'P{p_num}'
 
     analyzed[f'{prefix} Party'] = p_num
+    analyzed[f'{prefix} PartyId'] = p_id
     analyzed[f'{prefix} Type'] = p_type
     analyzed[f'{prefix} Age'] = p_age
     analyzed[f'{prefix} Gender'] = p_sex
     
     analyzed[f'{prefix} Fault'] = p_fault
     analyzed[f'{prefix} Other Assoc Factor'] = p_oaf
+    analyzed[f'{prefix} InAttention'] = p_inattention
+    analyzed[f'{prefix} Street/Hwy'] = p_street
     analyzed[f'{prefix} Lane'] = p_lane
-    analyzed[f'{prefix} Dir-InAttention'] = p_dir
+    analyzed[f'{prefix} Direction'] = p_dir
     analyzed[f'{prefix} Movement'] = p_movement
     analyzed[f'{prefix} SpeedLimit'] = p_speed_limit
     analyzed[f'{prefix} Vehicle'] = p_vehicle
+    
+    analyzed[f'{prefix} Airbag'] = p_airbag
+    analyzed[f'{prefix} Safety Equipment'] = p_safety_equip
+    analyzed[f'{prefix} Special Information'] = p_special_info
+
 
     analyzed[f'{prefix} Sobriety'] = p_sobriety
     
     # add in associated injured persons lists
     analyzed[f'{prefix} Assoc Injured list'] = p_injured_list
+    analyzed[f'{prefix} Assoc Injured list Id'] = p_injured_list_id
     analyzed[f'{prefix} Assoc Injury Extent list'] = p_injury_extent_list
 
 def add_empty_party(analyzed, p_num):
     prefix = f'P{p_num}'
 
     analyzed[f'{prefix} Party'] = ''
+    analyzed[f'{prefix} PartyId'] = ''
     analyzed[f'{prefix} Type'] = ''
     analyzed[f'{prefix} Age'] = ''
     analyzed[f'{prefix} Gender'] = ''
     analyzed[f'{prefix} Fault'] = ''
     analyzed[f'{prefix} Other Assoc Factor'] = ''  
+    analyzed[f'{prefix} InAttention'] = ''  
+    analyzed[f'{prefix} Street/Hwy'] = ''  
     analyzed[f'{prefix} Lane'] = ''  
-    analyzed[f'{prefix} Dir-InAttention'] = ''
+    analyzed[f'{prefix} Direction'] = ''
     analyzed[f'{prefix} Movement'] = ''
     analyzed[f'{prefix} SpeedLimit'] = ''
     analyzed[f'{prefix} Vehicle'] = ''
+    analyzed[f'{prefix} Airbag'] = ''
+    analyzed[f'{prefix} Safety Equipment'] = ''
+    analyzed[f'{prefix} Special Information'] = ''
     analyzed[f'{prefix} Sobriety'] = ''
     analyzed[f'{prefix} Assoc Injured list'] = ''
+    analyzed[f'{prefix} Assoc Injured list Id'] = ''
     analyzed[f'{prefix} Assoc Injury Extent list'] = ''
 
 def get_injury_extent(extent_of_injury):
@@ -304,7 +338,7 @@ def add_injury_counts(analyzed, injureds, logger):
             # log exception
             logger['logfile'].write(f'CID:{analyzed['CollisionId']} Unexpected Injured Person type = {p_type}\n')
             logger['nwarnings'] += 1
-            continue
+            person = 'Other'
         
         inj_type = injured['ExtentOfInjuryCode']
         injury = get_injury_extent(inj_type)
@@ -312,7 +346,7 @@ def add_injury_counts(analyzed, injureds, logger):
             # log exception
             logger['logfile'].write(f'CID:{analyzed['CollisionId']} Unexpected Extent of Injury = {inj_type}\n')
             logger['nwarnings'] += 1
-            continue
+
 
         injury_table[f'{person}-{injury}'] += 1
  
@@ -397,18 +431,16 @@ def main():
     
     begtime_all = time.perf_counter()
     n = 0
-    ngeo_updated = 0
  
     for search_city in search_cities:
         for year in years:
             
-            print(f"Distilling {search_city} {year}")
+            print(f"\nDistilling {search_city} {year}")
  
             crashes_file = inpath + f'CCRS_crashes_{search_city}_{year}.csv'
             parties_file = inpath + f'CCRS_parties_{search_city}_{year}.csv'
             injured_file = inpath + f'CCRS_injured_{search_city}_{year}.csv'
             out_file = outpath + f'CCRS_{search_city}_{year}.csv'
-            nogeo_file = out_file.replace('.csv', '_nogeo.csv')
             begtime = time.perf_counter()
             n+=1
  
@@ -416,11 +448,7 @@ def main():
             crashes, crash_keys  = getListDictCsv(crashes_file, ',', encoding='cp850')
             parties, party_keys  = getListDictCsv(parties_file, ',', encoding='cp850')
             injureds, injured_keys = getListDictCsv(injured_file, ',', encoding='cp850')
-            
-            # the API sometimes returns duplicate parties - dedupe
-            unique_parties = list({tuple(sorted(d.items())): d for d in parties}.values())
-            parties = unique_parties
-            
+                       
             # quickly determine max #parties for all crash records
             nparty_max  = 0
             for crash in crashes:
@@ -431,33 +459,29 @@ def main():
             logfile = f'{logpath}warnings_{search_city}_{year}.log'
             logger = {'logfile': open_append(logfile), 'nwarnings':0}
             
+            # first deal out parties and injureds by crashes['Collision Id']
+            party_dict = dict()
+            injured_dict = dict()
+            for crash in crashes:
+                party_dict[crash['Collision Id']] = []
+                injured_dict[crash['Collision Id']] = []                
+            for party in parties:
+                party_dict[party['CollisionId']].append(party)
+            for injured in injureds:
+                injured_dict[injured['CollisionId']].append(injured)
+            
             # distill data for each crash
             for crash in crashes:
-                crash_parties = get_parties(crash['Collision Id'], parties)  # in party order
-                crash_injureds = [injured for injured in injureds if injured['CollisionId']==crash['Collision Id']]
-
+                crash_parties = order_parties(party_dict[crash['Collision Id']])
+                crash_injureds = injured_dict[crash['Collision Id']]
                 crash_distill = distill(crash, crash_parties, crash_injureds, nparty_max, logger)
                 analyzed.append(crash_distill)
-                
-            # add geocoding for empy (lat,lon) and repair out-of-bounds (lat,lon)
-            if geoCode:
-                geotime = time.perf_counter()
-                nogeo, nupdated = add_geo(analyzed, geoTest)
-                print(f"Time to add geocoding = {time.perf_counter()-geotime}")
-                ngeo_updated += nupdated
-                if len(nogeo) > 0:
-                    dumpListDictToCSV([crash for crash in analyzed if crash['CollisionId'] in nogeo],\
-                        nogeo_file, ',',  crash_keys)
-                    print(f"Collisions with no geo saved in {nogeo_file}")
-                
+                                
             # save analyzed dictionary to CSV file (use keys from the first crash)
             crash_keys = list(analyzed[0].keys())
             dumpListDictToCSV(analyzed, out_file, ',', crash_keys)
             print(f"\nOutput saved in {out_file}")
-            if geoCode:
-                print(f"Time to distill and QC geolocation: {time.perf_counter()-begtime:.4f} sec")
-            else:
-                print(f"Time to distill: {time.perf_counter()-begtime:.4f} sec")
+            print(f"Time to distill: {time.perf_counter()-begtime:.4f} sec")
             
             # See if any issues occurred
             logger['logfile'].close()
@@ -467,7 +491,6 @@ def main():
                 os.remove(logfile)
             
     print(f"\nTotal time to distill CCRS records for {len(years)} years and {len(search_cities)} cities: {time.perf_counter()-begtime_all:.4f} sec")
-    print(f" Total number of geolocations to repair/add = {ngeo_updated}")
 
    
 # Main body

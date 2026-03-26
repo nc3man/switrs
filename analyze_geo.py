@@ -10,7 +10,7 @@ import time
 import os
 
 # User variables
-inpath = './CCRS_geo/'
+inpath = './CCRS_new_format/'
 outpath = './'
 
 # Helper functions ---------------------------------------------------------

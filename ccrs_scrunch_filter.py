@@ -7,74 +7,78 @@ from getDataCsv import getListDictCsv
 from pull_ccrs import get_CCRS_processed
 from operator import itemgetter
 from datetime import datetime
+import sys
 import time
 import os
 
 # User variables
-# FILENAME_SEARCH = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista', 'San Diego']
-FILENAME_SEARCH = ['Santee','Poway','Lemon Grove','La Mesa','Imperial Beach','El Cajon','Coronado','Carlsbad']
+FILENAME_SEARCH = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', '_Vista_', '_San Diego_',
+    'Chula Vista','Escondido','Santee','Poway','Lemon Grove','La Mesa','Imperial Beach','El Cajon','Coronado',
+    'National City','San Marcos','San Diego Harbor','San Diego State Univ','Uc San Diego','Unincorporated']
 inpath = './CCRS/'
 
-# search = ['bicy']
-# output_file_template = 'CCRS_bike_FILENAME_2015_to_2025-12-31.csv'
-# outpath = './CCRS/CCRS_bike/'
+# search_type = 'bike'
+# search_type = 'bike-ped'
+search_type = 'cities_all'
+output_file_template = 'CCRS_SEARCHTYPE_FILENAME_2016_to_2025-12-31.csv'
+output_path_template = './CCRS/CCRS_SEARCHTYPE/'
 
-# search = ['bicy','pedestrian']
-# output_file_template = 'CCRS_bike-ped_FILENAME_2015_to_2025-12-31.csv'
-# outpath = './CCRS/CCRS_bike-ped/'
-
-search = ['all']
-output_file_template = 'CCRS_all_FILENAME_2015_to_2025-12-31.csv'
-outpath = './CCRS/CCRS_cities_all/'
-
-# FILENAME_SEARCH = ['bike']
-# search = ['bicy']  # keep crashes where ANY field matches a string in the search list
-# google-fixed geos
-# search = [
-#     3527695,
-#     3539815,
-#     3544675,
-#     3556063,
-#     3175147,
-#     2925405,
-#     2969742,
-#     30616,
-#     30633,
-#     3602755,
-#     3595607,
-#     3623379,
-#     3725593,
-#     3702093,
-#     3740411,
-#     3707401,
-#     3751878,
-#     3754691,
-#     3747963,
-#     3758398,
-#     748703,
-#     3078441,
-#     81381
-# ]
-# search = [str(s) for s in search]
-# pelias-fixed geos
-# search = [
-#     2893930,
-#     3566002,
-#     3582257,
-#     3661133,
-#     3696689,
-#     3726301,
-#     3757786,
-#     3753531,
-#     3076266,
-#     3087900,
-#     3106713,
-# ]
-# search = [str(s) for s in search]
+# Globals
+SEARCH_KEYS = ['Motor Vehicle Involved With','Type'] # search only keys containing these strings
+BICY_INJURY = ['Bicyclist-Fatal','Bicyclist-SuspectSerious','Bicyclist-SuspectMinor','Bicyclist-PossibleInjury']
+PED_INJURY = ['Pedestrian-Fatal','Pedestrian-SuspectSerious','Pedestrian-SuspectMinor','Pedestrian-PossibleInjury']
 
 # Helper  ---------------------------------------------------------
 
-def filter(row_search, crashes, crash_keys, keys_max):
+def filter(search_type, crashes, crash_keys, keys_max):
+    matched_crashes = []
+    
+    if search_type == 'cities_all':
+        row_search = 'all'
+    elif search_type == 'bike-ped':
+        row_search = ['bicy','pedestrian']
+    elif search_type == 'bike':
+        row_search = ['bicy']
+    else:
+        print(f"Unknown search_type = {search_type}")
+        sys.exit()
+
+    for crash in crashes:
+        if search_type == 'cities_all':
+            keepRow = True
+        else:
+            keepRow = False
+            # check specific keys first
+            check_keys = [k for k in crash_keys if any(s in k for s in SEARCH_KEYS)]
+            for key in check_keys:
+                for s in row_search:
+                    if s.lower() in crash[key].lower():
+                        keepRow = True
+                        break
+                if keepRow:
+                        break
+                        
+            # check injury table if necessary
+            if keepRow == False:
+                count_injured = 0
+                for inj in BICY_INJURY:
+                    count_injured += int(crash[inj])
+                if search_type == 'bike-ped':
+                    for inj in PED_INJURY:
+                        count_injured += int(crash[inj])
+                if count_injured > 0:
+                    keepRow = True
+        
+        if keepRow:
+            # fill in blanks for all keys between last party key and end of keys_max
+            last_key = crash_keys[-1]
+            extend = {k:"" for k in keys_max[keys_max.index(last_key)+1:]}
+            crash.update(extend)           
+            matched_crashes.append(crash)
+            
+    return matched_crashes
+    
+def filter_orig(search_type, crashes, crash_keys, keys_max):
     matched_crashes = []
 
     for crash in crashes:
@@ -82,6 +86,12 @@ def filter(row_search, crashes, crash_keys, keys_max):
         for key in crash_keys:
             # exclude 'Pedestrian Action' column (almost always has string 'PEDESTRIAN')
             if key == 'Pedestrian Action':
+                continue
+            # exclude 'Pn_Safety Equipment' column (often contains 'MOTOR BICYCLE' for motorcycle party)
+            if 'Safety Equipment' in key:
+                continue
+            # exclude 'Pn_Vehicle' column (can contain e.g. 'MotorizedBicycle' for non-BICYCLIST)
+            if 'Vehicle' in key and key[0]=='P':
                 continue
             for s in row_search:
                 if s.lower() in crash[key].lower() or s=='all':
@@ -141,8 +151,10 @@ def date_sort(crashes):
 
 def main():
     
+    outpath = output_path_template.replace('SEARCHTYPE', search_type)
+
     for string in FILENAME_SEARCH:
-        found_files = get_CCRS_processed(inpath, [string], exclude=['poorgeo','nogeo','huge','all','_bike_','_bike-ped_'])
+        found_files = get_CCRS_processed(inpath, [string], exclude=['poorgeo','nogeo','huge','_all_','_bike_','_bike-ped_'])
         matched_crashes_all = []
  
         # first, need header to cover max # of parties
@@ -156,7 +168,7 @@ def main():
 
         for csvfile in found_files:
             crashes, crash_keys  = getListDictCsv(csvfile, ',')
-            search_matched_crashes = filter(search, crashes, crash_keys, keys_max)
+            search_matched_crashes = filter(search_type, crashes, crash_keys, keys_max)
             matched_crashes_all += search_matched_crashes
             
         # not all Party keys may be necessary after filtering    
@@ -166,7 +178,10 @@ def main():
         matched_crashes_sorted = date_sort(matched_crashes_all)
             
         # save scrunched crashes only
-        out_file = outpath + output_file_template.replace('FILENAME', string)
+        out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', search_type)
+        out_file = out_file.replace('__','_')  # if underscore used to unique filename: eg 'Vista' vs 'Chula Vista', replace '__')
+        if search_type == 'cities_all':
+            out_file = outpath + output_file_template.replace('FILENAME', string).replace('SEARCHTYPE', 'all')
         dumpListDictToCSV(matched_crashes_sorted, out_file, ',', used_keys)
         
         print(f"Scrunched file: {out_file}")

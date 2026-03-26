@@ -8,12 +8,12 @@ import time
 import sys
 
 # User variables
-# years = ['2015', '2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
-# search_cities = ['Encinitas', 'Carlsbad', 'Solana Beach', 'Oceanside', 'Del Mar', 'Vista', 'San Diego']
-# search_cities = ['3700','3797','3714','3715'] # for all NON-incorporated areas in SD County
-
-years = ['2015', '2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]  # careful with 2015
-search_cities = ['Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista']
+# years = ['2016','2017','2018','2019','2020','2021','2022','2023','2024','2025',]
+years = ['2016','2017','2018','2019','2020','2021','2022']
+search_cities = ['Del Mar', 'Solana Beach', 'Encinitas', 'Carlsbad', 'Vista', 'Oceanside',
+    'Santee', 'San Marcos','Poway','National City','Lemon Grove','La Mesa','San Diego',
+    'Imperial Beach','Escondido','El Cajon','Coronado','Chula Vista',
+    '3700','3797','3714','3715']
 
 inpath = 'C:/Users/karl/python/switrs/CCRS_raw/'
 outpath = 'C:/Users/karl/python/switrs/CCRS_raw_update_csv/'
