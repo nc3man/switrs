@@ -30,6 +30,7 @@ python source for distilling SWITRS and CCRS raw data
 | run_filter_ccrs_locations.ps1 | Interactive crash map display |
 | ccrs_update_provisionl.ps1 | Updates all local data for last 2 years |
 | ccrs_sync_drive.ps1 | Syncs all local CCRS/ changed files to Google Drive CCRS/ |
+| count_crashes.sh | Counts all the crashes per city in CCRS/CCRS_cities_all |
 
 ## Notes
 Scripts have editable data at top to specify input/output locations and parameters.
