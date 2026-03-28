@@ -7,6 +7,7 @@ from geocodePelias import geocode_pelias
 from geocodeGoogle import geocode_google
 from geopy.distance import geodesic
 from pull_ccrs import get_CCRS_processed
+from max_distances import get_max_distance
 import numpy as np
 import time
 import os
@@ -14,25 +15,24 @@ import os
 # User variables
 geoTest = True  # True means just estimate what needs to be done for Google API costs. False calls Google API $$$
 # inpath = './CCRS/CCRS_bike-ped/'
-inpath = './CCRS_to_geo_hold/'
+# inpath = './CCRS_to_geo_hold/'
+inpath = './test_analysis/issues/'
 outpath = './CCRS_updated_geo/'  # not updated if geoTest = True
 update = "ccrs" # only valid option now. Updates poor geo CCRS only + calls google API for blank (lat,lon)
-# update = "all_to_pelias"
-# update = "ccrs_to_pelias"
-# update = "all_to_google"
-# update = "ccrs_to_google"
+
+# Global
+DIST_THRESHOLD = 0  # set > 0 to override get_max_distance
 
 # Do not edit below this line ----------------------------------------------
-
 
 # Helper functions ---------------------------------------------------------      
 
 def add_geo(crashes, geoTest):
     # if geoTest=True, then only the number of google API geocode calls is printed to estimate cost
     
-    # pull out lat, lon if recorded by CCRS
-    crash_geos = [crash for crash in crashes if crash['GeoSrc']=='CCRS']
-    crash_empty = [crash for crash in crashes if crash['GeoSrc']==""]
+    # pull out lat, lon if recorded recorded by any means so far
+    crash_geos = [crash for crash in crashes if (len(crash['GeoSrc'])>0 and crash['Latitude']!='NO MATCH')]
+    crash_empty = [crash for crash in crashes if (crash['GeoSrc']=="" or crash['Latitude']=='NO MATCH')]
 
     nogeo = []
             
@@ -43,14 +43,18 @@ def add_geo(crashes, geoTest):
     lon_array = np.array([float(lon) for lon in lons], dtype=float)
     
     # find median of all the goodGeo (lat,lon)s, avoiding wild errors
-    center = [np.median(lat_array), np.median(lon_array)]
+    center = [np.median(lat_array), np.median(lon_array)]    
+    if DIST_THRESHOLD==0:
+        distance_threshold = get_max_distance(crashes[0]['City']) / 2
+    else:
+        distance_threshold = DIST_THRESHOLD
     
-    # identify crashes is lat,lon more than 70 miles from the center
+    # identify crashes if lat,lon is too far from center
     poor_geo_crashes = []
     for crash in crash_geos:
         latlon = [float(crash['Latitude']), float(crash['Longitude'])]
         try:
-            if geodesic(latlon, center).mi > 70.0:
+            if geodesic(latlon, center).mi > distance_threshold:
                 poor_geo_crashes.append(crash)
         except:
             print(f"Really bad latlon = {latlon}")
@@ -66,7 +70,13 @@ def add_geo(crashes, geoTest):
         for crash in poor_geo_crashes:
             # only use Google (Pelias unreliable for road intersections)
             geocode_google(crash)
-            crash['GeoSrc'] = 'Google < CCRS'
+            if 'CCRS' in crash['GeoSrc']:
+                crash['GeoSrc'] = 'Google < CCRS'
+            elif 'Pelias' in crash['GeoSrc']:
+                crash['GeoSrc'] = 'Google < Pelias'
+            else:
+                crash['GeoSrc'] = 'Google'
+
             if crash['Latitude']=="NO MATCH":
                 nogeo.append(crash['CollisionId'])
 
@@ -140,7 +150,6 @@ def update_geo_google(crashes):
 
         
     return nogeo, len(update_crashes)
- 
      
 # End helper functions ---------------------------------------------------------
 
@@ -150,7 +159,7 @@ def main():
     geo_files = get_CCRS_processed(inpath, include=[], exclude=[])
         # exclude=['poorgeo','nogeo','huge','all','_bike_','_bike-ped_'])
     GEOCOUNT = 0
-    
+       
     for csvfile in geo_files:
  
         print(f"Updating geo {update}: {csvfile}")
@@ -161,31 +170,14 @@ def main():
         if update == "ccrs":
             nogeo, nupdated = add_geo(crashes, geoTest)
             GEOCOUNT += nupdated
-            
-        # DISABLE original multiple alternatives
-        # elif update == "ccrs_to_pelias":
-        #     nogeo = update_ccrs_to_pelias(crashes)
-        #     
-        # elif update == "ccrs_to_google":
-        #     nogeo = update_ccrs_to_google(crashes)
-        #     
-        # elif update == "all_to_pelias":
-        #     nogeo = update_geo_pelias(crashes)
-        #     
-        # elif update == "all_to_google":
-        #     nogeo, nupdated = update_geo_google(crashes)
-        #     GEOCOUNT += nupdated
-            
+                        
         # save dictionary with geocoded updates to same-named CSV file in outpath
+        # if the input were previously update _nogeo.csv or _poorgeo.csv, strip those names
         out_file = csvfile.replace(inpath, outpath)
+        out_file = out_file.replace('poorgeo.csv','csv').replace('nogeo.csv','.csv')
         if geoTest == False:
-            dumpListDictToCSV(crashes, out_file, ',', crash_keys)
+            dumpListDictToCSV(crashes, out_file, '', crash_keys)
             print(f"{nupdated} geolocations saved in {out_file}")
-            if len(nogeo) > 0:
-                nogeo_file = out_file.replace('.csv','_nogeo.csv')
-                dumpListDictToCSV([crash for crash in crashes if crash['CollisionId'] in nogeo],\
-                    nogeo_file, ',',  crash_keys)
-                print(f"Collisions with no geo saved in {nogeo_file}")
             print(f"Time to update {update} geocoding: {time.perf_counter()-begtime:.2f} sec\n")
     
     if geoTest:

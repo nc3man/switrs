@@ -10,6 +10,10 @@ from createCrashPlacemarks import createCrashPlacemarks
 from PyQt5.QtWidgets import QApplication, QFileDialog
 from collision_filter_map import select_polygon_map
 from geopy.distance import geodesic
+from max_distances import get_max_distance
+
+# Global
+DIST_THRESHOLD = 100000  # set > 0 to override get_max_distance
 
 # Helper functions
 def select_file():
@@ -30,7 +34,7 @@ def select_file():
 
 def scanGeo(crashes):
     # categorize lat,lon data per crash as good, non-existent, poor
-    # poor is lat or lon differing by > 1.0 deg (~70 miles) from
+    # poor is lat or lon differing by ~max distance between any 2 points in city
     #    the median of all "goodGeo" data
     lat = [crash['Latitude'] for crash in crashes]
     lon = [crash['Longitude'] for crash in crashes]
@@ -57,10 +61,15 @@ def scanGeo(crashes):
     lat_center = np.median(lat_array)
     lon_center = np.median(lon_array)
 
-    # declare any (lat, lon) "poor" if it differs from the center by > 70 miles
+    # declare any (lat, lon) "poor" if it differs from the center by > max distance threshold
+    if DIST_THRESHOLD==0:
+        distance_threshold = get_max_distance(crashes[0]['City']) / 2
+    else:
+        distance_threshold = DIST_THRESHOLD
+
     for n in geo_index:
         try:
-            if geodesic([float(lat[n]), float(lon[n])], [lat_center, lon_center]).mi > 70.0:
+            if geodesic([float(lat[n]), float(lon[n])], [lat_center, lon_center]).mi > distance_threshold:
                 poorGeo[n] = True
         except:
             print(f"Really bad latlon = {[float(lat[n]), float(lon[n])]}")
@@ -106,6 +115,11 @@ def find_crashes_inside_polygon(crashes, coords):
     return keep_CollisionIds
 
 def main():
+    # warn if DIST_THRESHOLD>0 so that ALL points with geos will display
+    if DIST_THRESHOLD > 0:
+        print(f"Warning DIST_THRESHOLD={DIST_THRESHOLD}")
+        print(f"ALL geolocations will be displayed unless DIST_THRESHOLD=0")
+
     # Load select CCRS csv file
     ccrs_csv = select_file()
     crashes, crash_keys = getDataCsv( ccrs_csv, ',', pivot=True)

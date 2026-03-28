@@ -3,7 +3,6 @@
 # Imports
 from dumpDictToCSV import dumpListDictToCSV
 from getDataCsv import getListDictCsv
-from geocodePelias import geocode_pelias
 from geocodeGoogle import geocode_google
 from geopy.distance import geodesic
 from pull_ccrs import get_CCRS_processed
@@ -20,7 +19,7 @@ outpath = './CCRS_test_updated_geo/'  # not updated if geoTest = True
 # bike-ped Unincorporated 3/27/2026
 # collision_ids = [493204,452021,1263707,1796550,1207875,1783844,529485,997701,1013643,
 #     4938053,592401,984663,529485,1860206]
-# still had to repair 592401 (2017) and 1796550 (2022) manually
+# still had to repair 592401 (2017) and 1796550 (2022) manually via Google Maps
 
 
 # Do not edit below this line ----------------------------------------------
@@ -30,7 +29,6 @@ outpath = './CCRS_test_updated_geo/'  # not updated if geoTest = True
 def add_geo_id(crashes, geoTest):
     # if geoTest=True, then only the number of google API geocode calls is printed to estimate cost
     
-    # pull out lat, lon if recorded by CCRS
     crashes_update = [crash for crash in crashes if int(crash['CollisionId']) in collision_ids]
     nupdated = len(crashes_update)
     print(f"Updating {nupdated} total")
@@ -40,7 +38,10 @@ def add_geo_id(crashes, geoTest):
         
         for crash in crashes_update:
             geocode_google(crash)
-            crash['GeoSrc'] = 'Google < CCRS'
+            if crash['GeoSrc']=='CCRS':
+                crash['GeoSrc'] = 'Google < CCRS'
+            else:
+                crash['GeoSrc'] = 'Google'
             if crash['Latitude']=="NO MATCH":
                 nogeo.append(crash['CollisionId'])
        

@@ -43,7 +43,7 @@ def added_geo_collisionIds(geo_files):
 
 def main():
 
-    update_files = get_CCRS_processed(path_to_update, ['CCRS'], exclude=['nogeo','huge','poorgeo','bike','bike-ped','all'])
+    update_files = get_CCRS_processed(path_to_update, ['CCRS'], exclude=['nogeo','huge','poorgeo'])
     geo_files = get_CCRS_processed(path_geo, ['CCRS'], exclude=['nogeo','huge','poorgeo'])
 
     # first get all CollisionIds that have updated geolocation
