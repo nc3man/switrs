@@ -1,0 +1,12 @@
+1. 3/25/2026 - New columns added and a couple others updated for clarity
+Crash update: 
+- Added 'Special Condition', for extra info
+
+Parties updates: 
+- Added 'PartyId' and 'Assoc Injury list Id' - These were added to directly reference back to the Parties and InjuryWitnessPassengers records should you want to look at those in more detail.
+- 'Direction of Travel' and 'Inattention' are now separate columns (also in the raw data) making the dual purpose 'Dir-Inattention' field obsolete (never made sense)
+- 'Street/Hwy' - to pinpoint which road each party is on
+- 'Lane' added "of {total #lanes}. e.g. instead of Lane="1" it now says "1 of 2". Some LEOs do not use the lane  for Lane number but it's readable
+- Updated 'Vehicle' to prepend the manual 'Vehicle Description' which says more than simply 'yr/make/model/color'. Example: 'SportUtilityVehicle: 2011/CHEV/Traverse/RED'
+
+2. 3/29/2026 - Removed all Pelias geocoding and associated metrics columns
