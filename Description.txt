@@ -8,6 +8,7 @@ Each folder contains data in spreadsheet files to facilitate crash analysis by a
 CCRS_city_year: One csv file per city[SANDAG cities & Unincorporated areas] and year[2016-2025]
 CCRS_bike: Crashes involving bicyclists, one csv file per city, all years concatenated together
 CCRS_bike-ped: Crashes involving bicyclists and pedestrians, one csv file per city, all years concatenated together
+CCRS_cities_all: All crashes for each city, all years concatenated together.
 CCRS_raw_update_api: All raw data directly downloaded from the CCRS servers via API. For each city and year there are 3 files labeled 'crashes', 'parties', 'injured' to align with the huge statewide csv files available at the CCRS website per year for Crashes, Parties, InjuredWitnessPassengers, respectively. These raw direct transcriptions are not intended for data analysis except in the rare instance where an analyst may wish to look up *everything* for a particular CollisionId, PartyId, or InjuredId.
 
 There is also an interactive map visualization tool available upon request.
